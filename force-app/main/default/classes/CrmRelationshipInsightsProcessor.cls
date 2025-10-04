@@ -1,4 +1,6 @@
 public with sharing class CrmRelationshipInsightsProcessor {
+  static string PROMPT_RELATIONSHIP_ENTITY_EXTRACTION = 'RRA_EntitiesFromCRM';
+  static string PROMPT_RELATIONSHIP_INSIGHT = 'RRA_ConsolidateInsights';
   private static final Integer MAX_CHARS_PER_CHUNK = 80000; // ~20k tokens
 
   private ICrmReferentialEntity targetEntity;
@@ -62,7 +64,10 @@ public with sharing class CrmRelationshipInsightsProcessor {
     params.put('Input:TargetEntity', (Object) targetEntity.serialize());
     params.put('Input:CRMData', (Object) chunk);
 
-    EinsteinPromptResponse response = EinsteinPromptService.prompt('RRA_EntitiesFromCRM', params);
+    EinsteinPromptResponse response = EinsteinPromptService.prompt(
+      PROMPT_RELATIONSHIP_ENTITY_EXTRACTION,
+      params
+    );
     return RelationshipInsightsEnvelope.fromObjectList(
       response.getJsonList(),
       RelationshipInsightsEnvelope.SOURCE_CRM
@@ -82,7 +87,7 @@ public with sharing class CrmRelationshipInsightsProcessor {
     params.put('Input:ExtractedInsights', (Object) JSON.serialize(relationships));
 
     final EinsteinPromptResponse response = EinsteinPromptService.prompt(
-      'RRA_ConsolidateInsights',
+      PROMPT_RELATIONSHIP_INSIGHT,
       params
     );
     return RelationshipInsightsEnvelope.fromObjectList(

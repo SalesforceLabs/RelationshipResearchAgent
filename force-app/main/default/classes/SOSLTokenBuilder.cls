@@ -65,6 +65,11 @@ public class SOSLTokenBuilder {
 
   // all collected tokens eg [AAA,BBB,CCC]. Tracking to ensure uniqueness.
   final Set<String> allTokens = new Set<String>();
+
+  final Set<String> allOriginalTokens = new Set<String>();
+  public List<string> getAllOriginalTokens() {
+    return new List<String>(allOriginalTokens);
+  }
   // SOSL statement to execute, in form of AAA OR BBB OR CCC
   public String collectedTokens { get; private set; }
   private Integer collectedTokensCount = 0;
@@ -133,7 +138,8 @@ public class SOSLTokenBuilder {
     if (string.isBlank(sanitizedToken) || !allTokens.add(sanitizedToken.toUpperCase())) {
       return false;
     }
-
+    // for datacloud search, collect all original tokens.
+    allOriginalTokens.add(token);
     if (
       this.collectedTokensCount >= SOSL_MAX_SEARCH_TERMS ||
       collectedTokens.length() + sanitizedToken.length() + SOSL_JOIN.length() >=

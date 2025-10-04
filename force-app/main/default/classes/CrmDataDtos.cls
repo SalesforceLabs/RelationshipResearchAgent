@@ -11,6 +11,10 @@ public with sharing class CrmDataDtos {
       this.contacts = new List<CompactContact>();
     }
 
+    public Integer size() {
+      return accounts.size() + contacts.size();
+    }
+
     public List<Object> toObjectList() {
       List<Object> elements = new List<Object>();
 
@@ -58,6 +62,39 @@ public with sharing class CrmDataDtos {
     public String serialize() {
       return JSON.serialize(this);
     }
+    public string getAccountId() {
+      return id;
+    }
+    public string getContactId() {
+      return '';
+    }
+  }
+
+  // Contact is core CRM class. It is necessary to pass Contact object,
+  // as the Name is not necessarily always extracted.
+  private static String getFullContactName(Contact con) {
+    try
+    {
+      if (!String.isBlank(con.Name)) {
+        return con.Name;
+      }
+    } 
+    catch(Exception e)
+    {
+      // do nothing: this means, Name is not available (has not been selected in query).
+      // which semantically is the same as being blank.
+    }
+    // With Name not available, we fall back to FirstName + LastName
+    String fullName = '';
+    if (!String.isBlank(con.FirstName)) {
+      fullName += con.FirstName;
+    }
+    if (!String.isBlank(con.LastName)) {
+      if (fullName != '')
+        fullName += ' ';
+      fullName += con.LastName;
+    }
+    return fullName;
   }
 
   public class CompactContact implements ICrmReferentialEntity {
@@ -75,7 +112,7 @@ public with sharing class CrmDataDtos {
     public CompactContact(Contact con) {
       this.id = con.Id;
       this.type = 'contact';
-      this.name = con.FirstName + ' ' + con.LastName;
+      this.name = getFullContactName(con);
       this.email = con.Email;
       this.accountId = con.AccountId;
       this.accountName = con.Account?.Name;
@@ -99,6 +136,12 @@ public with sharing class CrmDataDtos {
 
     public String serialize() {
       return JSON.serialize(this);
+    }
+    public string getAccountId() {
+      return accountId;
+    }
+    public string getContactId() {
+      return id;
     }
   }
 
@@ -143,6 +186,12 @@ public with sharing class CrmDataDtos {
 
     public String serialize() {
       return JSON.serialize(this);
+    }
+    public string getAccountId() {
+      return accountId;
+    }
+    public string getContactId() {
+      return contactId;
     }
   }
 
@@ -211,6 +260,12 @@ public with sharing class CrmDataDtos {
 
     public String serialize() {
       return JSON.serialize(this);
+    }
+    public string getAccountId() {
+      return '';
+    }
+    public string getContactId() {
+      return '';
     }
   }
 }

@@ -1,9 +1,6 @@
 public with sharing class RRAClientAsync implements Queueable {
   private String recordId;
-  private Boolean useDeepWebSearch;
-  private Boolean useRecordContext;
-  private Boolean isNewResearch;
-
+  private RRAClientOptions options;
   public class JobResponse {
     public String jobId;
     public String status;
@@ -14,29 +11,17 @@ public with sharing class RRAClientAsync implements Queueable {
     }
   }
 
-  public RRAClientAsync(
-    String recordId,
-    Boolean useDeepWebSearch,
-    Boolean useRecordContext,
-    Boolean isNewResearch
-  ) {
+  public RRAClientAsync(String recordId, RRAClientOptions options) {
     this.recordId = recordId;
-    this.useDeepWebSearch = useDeepWebSearch;
-    this.useRecordContext = useRecordContext;
-    this.isNewResearch = isNewResearch;
+    this.options = options;
   }
 
   private static String getCacheKey(String recordId) {
     return 'RRA' + recordId;
   }
-
   @AuraEnabled(cacheable=false)
-  public static String createRelationshipsAsync(
-    String recordId,
-    Boolean useDeepWebSearch,
-    Boolean useRecordContext,
-    Boolean isNewResearch
-  ) {
+  public static String createRelationshipsAsync(String recordId, RRAClientOptions options) {
+    // do not attempt to "fix" options - that should be done by RRAClient.createRelationships
     String jobKey = getCacheKey(recordId);
 
     // Check for existing active job
@@ -52,9 +37,7 @@ public with sharing class RRAClientAsync implements Queueable {
       }
     }
 
-    Id jobId = System.enqueueJob(
-      new RRAClientAsync(recordId, useDeepWebSearch, useRecordContext, isNewResearch)
-    );
+    Id jobId = System.enqueueJob(new RRAClientAsync(recordId, options));
 
     // Cache for 2 hours
     Cache.Org.put(jobKey, String.valueOf(jobId), 7200);
@@ -64,7 +47,7 @@ public with sharing class RRAClientAsync implements Queueable {
 
   public void execute(QueueableContext context) {
     try {
-      RRAClient.createRelationships(recordId, useDeepWebSearch, useRecordContext, isNewResearch);
+      RRAClient.createRelationships(recordId, options);
       System.debug('RRA async job completed for record: ' + recordId);
     } catch (Exception e) {
       System.debug('RRA async job failed for record: ' + recordId + ' - ' + e.getMessage());

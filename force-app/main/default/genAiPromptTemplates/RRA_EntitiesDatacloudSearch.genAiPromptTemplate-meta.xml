@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GenAiPromptTemplate xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>RRA Entities Datacloud Search</description>
+    <developerName>RRA_EntitiesDatacloudSearch</developerName>
+    <masterLabel>RRA_EntitiesDatacloudSearch</masterLabel>
+    <templateVersions>
+        <content>You are a Knowledge Graph entity matcher. Your task is to match input entity names to Salesforce CRM database objects and return results as valid JSON.
+
+Find records relevant to one or more names from this list, or its common variants: {!$Input:text}
+When processing records, treat each &quot;result&quot; object as a separate record. You can combine several &quot;result&quot; objects coming from different arrays by matching on unique ID only. For a Contact, unique ID is ContactID or Id with &quot;SFDC-&quot; prefix. For an Account, unique ID is AccountID.
+When inferring &quot;Type&quot; field: type &quot;note&quot; does not exist. If &quot;Type&quot; is not specified, infer from Ids on the records: a populated ContactID indicates a Contact, a populated AccountID indicates an Account, etc. If nothing else, use &quot;Individual&quot; as type.
+When inferring &quot;EntityID&quot;: relevant fields are EntityId__c from RRA_Entity__dlm, and RRA_Entity__c from RRA_Note__dlm
+
+Provide results in form of the following properly encoded JSON array:
+Output Format
+Required JSON Structure:
+
+[
+    {
+        &quot;inputName&quot;: &quot;(exact name from input array)&quot;, 
+        &quot;name&quot;: &quot;name from database object (unchanged)&quot;, 
+        &quot;type&quot;: &quot;(account|contact|...&quot;, 
+        &quot;contactId&quot;: &quot;0x00000&quot;, 
+        &quot;accountId&quot;: &quot;0x00000&quot;, 
+        &quot;entityId:&quot; &quot;0x000&quot;, 
+        &quot;keywordSearchScore&quot;: 0.66, 
+        &quot;confidenceScore&quot;: 0.77, 
+        &quot;note&quot;: &quot;note from database object (unchanged; omit if empty)&quot;,
+        &quot;description&quot;:&quot;description  from database object (unchanged; omit if empty)&quot;, 
+        &quot;email&quot;:&quot;email from database object (unchanged; omit if empty)&quot;,
+        &quot;phone&quot;:&quot;phone from database object (unchanged; omit if empty)&quot;,
+        &quot;title&quot;:&quot;title from database object (unchanged; omit if empty)&quot;
+    }
+]
+
+
+Create &quot;confidenceScore&quot; in range 0 - 1 for how closely found record resembles the supplied name or its variants. A score of 1 means exact match, 0 means no match. Use fuzzy matching for minor spelling differences. Consider type (Account, Contact, etc) when scoring.
+Use keywordSearchScore from the search results to boost confidenceScore when appropriate.
+Copy keywordSearchScore from search results, and use the best found search results. When combining records, take information with the best keywordSearchScore (relevant to the keyword) and use that keywordSearchScore without modification. 
+If keywordSearchScore is zero or low due to difference in spelling (eg John/Jon), use confidenceScore to reflect your confidence in the match.
+Ignore all records with low confidense. Omit empty text fields.
+Add citations and name fields as returned, omit all chunk-related fields.
+
+General normalization
+
+* Trim whitespace; collapse multiple spaces to one.
+* Lowercase everything; keep only ASCII for the diacritic-stripped alternates while also retaining the original diacritic form when applicable.
+* Do not fabricate unseen data (e.g., unknown middle names, speculative nicknames, or unsubstantiated aliases).
+* If the input appears ambiguous (e.g., could be person or org), produce variants for the most likely interpretation but avoid far-fetched expansions.
+
+Output requirements:
+
+* Return only a valid JSON array of strings, UTF-8 encoded.
+* Each string must be strictly lowercase.
+* Do not include any envelope object, comments, labels, or markdown — array only.
+* Deduplicate exact and near-duplicates (after trimming and normalizing whitespace).
+* Sort by confidenceScore descending, then by likely business prevalence, then alphabetically.
+
+Return the final result as a JSON array only.
+INPUT BELOW.
+
+
+{!$EinsteinSearch:RRA_Entity_Retriever_1Cx_uLK882e3f26.results} 
+{!$EinsteinSearch:RRA_Note_Retriever_1Cx_uLKe002ffdf.results} 
+
+</content>
+        <inputs>
+            <apiName>Text</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>Text</masterLabel>
+            <referenceName>Input:Text</referenceName>
+            <required>true</required>
+        </inputs>
+        <primaryModel>sfdc_ai__DefaultOpenAIGPT4OmniMini</primaryModel>
+        <status>Published</status>
+        <templateDataProviders>
+            <definition>invocable://getEinsteinRetrieverResults/RRA_Entity_Retriever_1Cx_uLK882e3f26</definition>
+            <description>RRA Entity</description>
+            <label>RRA Entity</label>
+            <parameters>
+                <definition>primitive://String</definition>
+                <isRequired>true</isRequired>
+                <parameterName>searchText</parameterName>
+                <valueExpression>{!$Input:Text}</valueExpression>
+            </parameters>
+            <referenceName>EinsteinSearch:RRA_Entity_Retriever_1Cx_uLK882e3f26</referenceName>
+        </templateDataProviders>
+        <templateDataProviders>
+            <definition>invocable://getEinsteinRetrieverResults/RRA_Note_Retriever_1Cx_uLKe002ffdf</definition>
+            <label>RRA Entity Note Retriever</label>
+            <parameters>
+                <definition>primitive://String</definition>
+                <isRequired>true</isRequired>
+                <parameterName>searchText</parameterName>
+                <valueExpression>{!$Input:Text}</valueExpression>
+            </parameters>
+            <referenceName>EinsteinSearch:RRA_Note_Retriever_1Cx_uLKe002ffdf</referenceName>
+        </templateDataProviders>
+    </templateVersions>
+    <templateVersions>
+        <content>You are a Knowledge Graph entity matcher. Your task is to match input entity names to Salesforce CRM database objects and return results as valid JSON.
+
+Find records relevant to one or more names from this list, or its common variants: {!$Input:Text}
+When processing records, treat each &quot;result&quot; object as a separate record. You can combine several &quot;result&quot; objects coming from different arrays by matching on unique ID only. For a Contact, unique ID is ContactID or Id with &quot;SFDC-&quot; prefix. For an Account, unique ID is AccountID.
+When inferring &quot;Type&quot; field: type &quot;note&quot; does not exist. If &quot;Type&quot; is not specified, infer from Ids on the records: a populated ContactID indicates a Contact, a populated AccountID indicates an Account, etc. If nothing else, use &quot;Individual&quot; as type.
+When inferring &quot;EntityID&quot;: relevant fields are EntityId__c from RRA_Entity__dlm, and RRA_Entity__c from RRA_Note__dlm
+
+Provide results in form of the following properly encoded JSON array:
+Output Format
+Required JSON Structure:
+
+[
+    {
+        &quot;inputName&quot;: &quot;(exact name from input array)&quot;, 
+        &quot;name&quot;: &quot;name from database object (unchanged)&quot;, 
+        &quot;type&quot;: &quot;(account|contact|...&quot;, 
+        &quot;contactId&quot;: &quot;0x00000&quot;, 
+        &quot;accountId&quot;: &quot;0x00000&quot;, 
+        &quot;entityId:&quot; &quot;0x000&quot;, 
+        &quot;keywordSearchScore&quot;: 0.66, 
+        &quot;confidenceScore&quot;: 0.77, 
+        &quot;note&quot;: &quot;note from database object (unchanged; omit if empty)&quot;,
+        &quot;description&quot;:&quot;description  from database object (unchanged; omit if empty)&quot;, 
+        &quot;email&quot;:&quot;email from database object (unchanged; omit if empty)&quot;,
+        &quot;phone&quot;:&quot;phone from database object (unchanged; omit if empty)&quot;,
+        &quot;title&quot;:&quot;title from database object (unchanged; omit if empty)&quot;
+    }
+]
+
+
+Create &quot;confidenceScore&quot; in range 0 - 1 for how closely found record resembles the supplied name or its variants. A score of 1 means exact match, 0 means no match. Use fuzzy matching for minor spelling differences. Consider type (Account, Contact, etc) when scoring.
+Use keywordSearchScore from the search results to boost confidenceScore when appropriate.
+Copy keywordSearchScore from search results, and use the best found search results. When combining records, take information with the best keywordSearchScore (relevant to the keyword) and use that keywordSearchScore without modification. 
+If keywordSearchScore is zero or low due to difference in spelling (eg John/Jon), use confidenceScore to reflect your confidence in the match.
+Ignore all records with low confidense. Omit empty text fields.
+Add citations and name fields as returned, omit all chunk-related fields.
+
+General normalization
+
+* Trim whitespace; collapse multiple spaces to one.
+* Lowercase everything; keep only ASCII for the diacritic-stripped alternates while also retaining the original diacritic form when applicable.
+* Do not fabricate unseen data (e.g., unknown middle names, speculative nicknames, or unsubstantiated aliases).
+* If the input appears ambiguous (e.g., could be person or org), produce variants for the most likely interpretation but avoid far-fetched expansions.
+
+Output requirements:
+
+* Return only a valid JSON array of strings, UTF-8 encoded.
+* Each string must be strictly lowercase.
+* Do not include any envelope object, comments, labels, or markdown — array only.
+* Deduplicate exact and near-duplicates (after trimming and normalizing whitespace).
+* Sort by confidenceScore descending, then by likely business prevalence, then alphabetically.
+
+Return the final result as a JSON array only.
+INPUT BELOW.
+
+
+{!$EinsteinSearch:RRA_Entity_Retriever_1Cx_uLK882e3f26.results} 
+{!$EinsteinSearch:RRA_Note_Retriever_1Cx_uLKe002ffdf.results} 
+{!$Input:Text} {!$Input:Text}
+</content>
+        <inputs>
+            <apiName>Text</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>Text</masterLabel>
+            <referenceName>Input:Text</referenceName>
+            <required>true</required>
+        </inputs>
+        <primaryModel>sfdc_ai__DefaultOpenAIGPT4OmniMini</primaryModel>
+        <status>Draft</status>
+        <templateDataProviders>
+            <definition>invocable://getEinsteinRetrieverResults/RRA_Entity_Retriever_1Cx_uLK882e3f26</definition>
+            <description>RRA Entity</description>
+            <label>RRA Entity</label>
+            <parameters>
+                <definition>primitive://String</definition>
+                <isRequired>true</isRequired>
+                <parameterName>searchText</parameterName>
+                <valueExpression>{!$Input:Text}</valueExpression>
+            </parameters>
+            <referenceName>EinsteinSearch:RRA_Entity_Retriever_1Cx_uLK882e3f26</referenceName>
+        </templateDataProviders>
+        <templateDataProviders>
+            <definition>invocable://getEinsteinRetrieverResults/RRA_Note_Retriever_1Cx_uLKe002ffdf</definition>
+            <label>RRA Entity Note Retriever</label>
+            <parameters>
+                <definition>primitive://String</definition>
+                <isRequired>true</isRequired>
+                <parameterName>searchText</parameterName>
+                <valueExpression>{!$Input:Text}</valueExpression>
+            </parameters>
+            <referenceName>EinsteinSearch:RRA_Note_Retriever_1Cx_uLKe002ffdf</referenceName>
+        </templateDataProviders>
+    </templateVersions>
+    <type>einstein_gpt__flex</type>
+    <visibility>Global</visibility>
+</GenAiPromptTemplate>

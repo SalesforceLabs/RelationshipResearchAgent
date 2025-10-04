@@ -1,19 +1,14 @@
 public with sharing class RRAClient {
   @AuraEnabled(cacheable=false)
-  public static String createRelationships(
-    String recordId,
-    Boolean useDeepWebSearch,
-    Boolean useRecordContext,
-    Boolean isNewResearch
-  ) {
+  public static String createRelationships(String recordId, RRAClientOptions options) {
     ICrmReferentialEntity targetEntity = CrmReferentialEntityResolver.resolveById(recordId);
 
     System.debug('Creating relationships for target entity: ' + targetEntity.serialize());
 
     System.debug('useDeepWebSearch:');
-    System.debug(useDeepWebSearch);
+    System.debug(options.useDeepWebSearch);
     System.debug('useRecordContext:');
-    System.debug(useRecordContext);
+    System.debug(options.useRecordContext);
 
     RRARelationships__c rraRecord = CrmDatabaseSelectors.getRraRecord(
       targetEntity.getId(),
@@ -22,10 +17,8 @@ public with sharing class RRAClient {
 
     RelationshipInsightsEnvelope insights = RelationshipInsightsService.getInsights(
       targetEntity,
-      useDeepWebSearch,
-      useRecordContext,
-      isNewResearch,
-      rraRecord
+      rraRecord,
+      options
     );
     return RelationshipInsightsPersister.persist(insights, rraRecord);
   }

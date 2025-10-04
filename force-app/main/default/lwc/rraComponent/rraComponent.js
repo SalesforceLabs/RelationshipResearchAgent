@@ -48,6 +48,14 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
   useAsyncExecution = true;
   useDeepWebSearch = true;
   useRecordContext = true;
+  entityMatcherMode = "SOSL_ONLY";
+  entityMatcherModeOptions = [
+    { label: "SOSL Only", value: "SOSL_ONLY" },
+    { label: "Datacloud Only", value: "DATACLOUD_ONLY" },
+    { label: "Datacloud and SOSL, No Fallback", value: "DATACLOUD_AND_SOSL" },
+    { label: "Datacloud and SOSL, Fallback Enabled", value: "DATACLOUD_AND_SOSL_FALLBACK" },
+    { label: "Datacloud, Fallback on SOSL", value: "DATACLOUD_FALLBACK_SOSL" }
+  ];
 
   // modal form behavior
   showCreateRecordModal = false;
@@ -105,9 +113,12 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
     if (this.useAsyncExecution) {
       const result = await createRelationshipsAsync({
         recordId: this.recordId,
-        useDeepWebSearch: this.useDeepWebSearch,
-        useRecordContext: this.useRecordContext,
-        isNewResearch: isNewResearch
+        options: {
+          useDeepWebSearch: this.useDeepWebSearch,
+          useRecordContext: this.useRecordContext,
+          isNewResearch: isNewResearch,
+          entityMatcherMode: this.entityMatcherMode
+        }
       });
 
       const jobInfo = JSON.parse(result);
@@ -132,9 +143,12 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
     } else {
       const data = await createRelationships({
         recordId: this.recordId,
-        useDeepWebSearch: this.useDeepWebSearch,
-        useRecordContext: this.useRecordContext,
-        isNewResearch: isNewResearch
+        options: {
+          useDeepWebSearch: this.useDeepWebSearch,
+          useRecordContext: this.useRecordContext,
+          isNewResearch: isNewResearch,
+          entityMatcherMode: this.entityMatcherMode
+        }
       });
       this.loadRelationships(data);
       this.graphRendered = false;
@@ -227,10 +241,12 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
       const savedAsync = localStorage.getItem(`rra_${this.recordId}_useAsyncExecution`);
       const savedDeepWeb = localStorage.getItem(`rra_${this.recordId}_useDeepWebSearch`);
       const savedRecordContext = localStorage.getItem(`rra_${this.recordId}_useRecordContext`);
+      const entityMatcherMode = localStorage.getItem(`rra_${this.recordId}_entityMatcherMode`);
 
       if (savedAsync !== null) this.useAsyncExecution = savedAsync === "true";
       if (savedDeepWeb !== null) this.useDeepWebSearch = savedDeepWeb === "true";
       if (savedRecordContext !== null) this.useRecordContext = savedRecordContext === "true";
+      if (entityMatcherMode !== null) this.entityMatcherMode = entityMatcherMode;
     }
 
     console.log("[RraComponent] connectedCallback end");
@@ -436,6 +452,13 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
     this.useRecordContext = event.target.checked;
     if (this.recordId) {
       localStorage.setItem(`rra_${this.recordId}_useRecordContext`, this.useRecordContext);
+    }
+  }
+
+  handleEntityMatcherModeChange(event) {
+    this.entityMatcherMode = event.target.value;
+    if (this.recordId) {
+      localStorage.setItem(`rra_${this.recordId}_entityMatcherMode`, this.entityMatcherMode);
     }
   }
 
