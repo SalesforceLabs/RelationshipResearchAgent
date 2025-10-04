@@ -1,4 +1,5 @@
 public with sharing class EntityMatcher {
+  public final static string PROMPT_ENTITIES_DATACLOUD_SEARCH = 'RRA_EntitiesDatacloudSearch';
   // The following two constants are here due to an Apex limitation that
   // prevents nested classes from having their own static properties.
   // --
@@ -33,11 +34,11 @@ public with sharing class EntityMatcher {
   // records from JSON in RRARelationships into separate records in a table
   // designed specifically for names resolution (eg with name as the primary
   // key), and then use flow there. This is outside POC.
-  public class EntityInfo {
+  public class EntityInfo implements ICrmReferentialEntity {
     @InvocableVariable
-    public ID id;
+    public String id; // Can be entity id from SSOT, eg. "SFDC-12345"
     @InvocableVariable
-    public String objectTypeName;
+    public String objectTypeName; // API name, eg Account - do we need it?
     @InvocableVariable
     public String objectTypeLabel;
     @InvocableVariable
@@ -46,6 +47,41 @@ public with sharing class EntityMatcher {
     public String phone;
     @InvocableVariable
     public String email;
+    @InvocableVariable
+    public String accountId; // optional but if exists it's CRM ID
+    @InvocableVariable
+    public String contactId; // optional but if exists it's CRM ID
+    @InvocableVariable
+    public String Note; // matching notes, if any
+    @InvocableVariable
+    public string Description; // not necessarily matching, can contain additional data. from SSOT
+    @InvocableVariable
+    public string Title;
+    @InvocableVariable
+    public Integer keywordSearchScore; // from DataCloud, 1-100, ignores name variants
+    @InvocableVariable
+    public Integer confidenceScore; // from LLM, 1-100, considers name variants
+    public String getSobjectType() {
+      // This might need to be changed due to datacloud config. TBD.
+      // Currently, relying on prompts to return correct objectTypeName from DataCloud searches.
+      return objectTypeName;
+    }
+    public String getId() {
+      // Note that objects coming from DataCloud might have different ID.
+      return id;
+    }
+    public String getName() {
+      return name;
+    }
+    public String serialize() {
+      return JSON.serialize(this);
+    }
+    public string getAccountId() {
+      return accountId;
+    }
+    public string getContactId() {
+      return contactId;
+    }
   }
 
   public class EntityInfoMatch {
@@ -70,8 +106,24 @@ public with sharing class EntityMatcher {
     public String name;
     public String phone;
     public String email;
-    public Integer confidenceScore;
+    public Double confidenceScore;
     public string inputName;
+  }
+
+  class DataCloudEntityJSON {
+    public String inputName; // input name that was searched for
+    public String entityId;
+    public String type;
+    public String name;
+    public String phone;
+    public String email;
+    public String accountId;
+    public String contactId;
+    public String note;
+    public String description;
+    public String title;
+    public Double keywordSearchScore;
+    public Double confidenceScore;
   }
 
   @TestVisible
@@ -115,9 +167,32 @@ public with sharing class EntityMatcher {
       listOfNames.add(name);
       termToEntityMap.put(key, entity);
     }
-
+    public ICrmReferentialEntity CrmContext { get; set; }
     public List<MatchedEntity> match() {
-      return match(findMatchesWithSosl(sosl));
+      List<EntityInfo> collectedEntities = new List<EntityInfo>();
+      try {
+        EntityMatcherDataCloud.collectMatchesWithDataCloud(
+          EntityMatcherDataCloud.getDataCloudSearchText(sosl, CrmContext),
+          collectedEntities
+        );
+        System.debug(
+          'DataCloud match for ' +
+            JSON.serialize(listOfNames) +
+            ': ' +
+            JSON.serialize(collectedEntities)
+        );
+      } catch (Exception ex) {
+        // Data cloud search can fail for a variety of reasons, including
+        // permissions, misconfiguration, or service issues. We log the error
+        // and proceed with SOSL-based matching.
+        System.debug('DataCloud search failed: ' + ex.getMessage());
+
+        // only rethrow in debugging mode
+        //throw ex;
+      }
+      // Even with exception above, some entities might have been collected.
+      collectMatchesWithSosl(sosl, collectedEntities);
+      return match(collectedEntities);
     }
 
     @TestVisible
@@ -138,9 +213,17 @@ public with sharing class EntityMatcher {
       };
 
       // Batch allMatches in fixed-size windows without mutating the input list
-      Integer total = allMatches == null ? 0 : allMatches.size();
-      if (total < 1) {
-        return listOfEntities;
+      Integer total = allMatches.size();
+
+      Map<String, EntityMatcher.MatchedEntity> termToEntityMap = new Map<String, EntityMatcher.MatchedEntity>();
+      for (EntityMatcher.MatchedEntity e : listOfEntities) {
+        termToEntityMap.put(getNormalizedKey(e.term), e);
+      }
+      Map<String, EntityInfo> idToEntityMap = new Map<String, EntityInfo>();
+      for (EntityInfo info : allMatches) {
+        if (!String.isBlank(info.id)) {
+          idToEntityMap.put(info.id, info);
+        }
       }
 
       for (Integer start = 0; start < total; start += MAX_MATCHES_BATCH) {
@@ -194,18 +277,25 @@ public with sharing class EntityMatcher {
             // matches found. we do not need to log this unless debugging.
             continue;
           }
-
-          EntityMatcher.EntityInfo info = new EntityMatcher.EntityInfo();
-          info.id = item.id;
+          EntityMatcher.EntityInfo info;
+          if (!idToEntityMap.containsKey(item.id)) {
+            System.debug('LLM returned entity ID that was not in the input: ' + item.id);
+            System.debug(JSON.serialize(item, true));
+            info = new EntityMatcher.EntityInfo();
+            info.id = item.id;
+          } else {
+            info = idToEntityMap.get(item.id).clone();
+          }
           info.objectTypeName = item.objectTypeName;
           info.objectTypeLabel = item.objectTypeLabel;
           info.name = item.name;
           info.phone = item.phone;
           info.email = item.email;
+          info.confidenceScore = EntityMatcherDataCloud.scoreToInteger(item.confidenceScore);
 
           EntityMatcher.EntityInfoMatch match = new EntityMatcher.EntityInfoMatch();
           match.info = info;
-          match.confidence = item.confidenceScore;
+          match.confidence = EntityMatcherDataCloud.scoreToInteger(item.confidenceScore);
           EntityMatcher.MatchedEntity entity = termToEntityMap.get(key);
           if (entity.matches == null) {
             entity.matches = new List<EntityMatcher.EntityInfoMatch>();
@@ -286,6 +376,7 @@ public with sharing class EntityMatcher {
   }
 
   @InvocableMethod(label='Find matches in Salesforce')
+  // @AuraEnabled(cacheable=false)
   public static List<MatchedEntity> findMatchesMulti(List<InputName> names) {
     if (names == null) {
       return null;
@@ -308,14 +399,13 @@ public with sharing class EntityMatcher {
     return p.match();
   }
 
-  private static List<EntityInfo> findMatchesWithSosl(SOSLTokenBuilder collectSosl) {
+  private static void collectMatchesWithSosl(SOSLTokenBuilder collectSosl, List<EntityInfo> infos) {
     String soslTextQuery = collectSosl.collectedTokens;
     if (String.isBlank(soslTextQuery)) {
       System.debug('sosl query cannot be constructed');
-      return null;
+      return;
     }
 
-    List<EntityInfo> infos = new List<EntityInfo>();
     SchemaData schemaData = SchemaData.getCachedSchemaData();
 
     for (;;) {
@@ -351,7 +441,5 @@ public with sharing class EntityMatcher {
 
       soslTextQuery = collectSosl.collectedTokens;
     }
-
-    return infos;
   }
 }

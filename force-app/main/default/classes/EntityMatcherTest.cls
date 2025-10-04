@@ -1,10 +1,11 @@
 @IsTest(SeeAllData=false)
 public class EntityMatcherTest {
+  final static string PROMPT_TEMPLATE_NAME = SOSLTokenBuilder.PROMPT_TEMPLATE_NAME;
   // Helper: create basic data + register mock executor with default name
   // variants
   private static EinsteinPromptService.MockExecutor setMockDataForMike() {
     EinsteinPromptService.MockExecutor exec = new EinsteinPromptService.MockExecutor();
-    exec.setResults(SOSLTokenBuilder.PROMPT_TEMPLATE_NAME, '["Mike","Michael"]');
+    exec.setResults(PROMPT_TEMPLATE_NAME, '["Mike","Michael"]');
     EinsteinPromptService.setExecutorForTest(exec);
 
     // Seed simple graph (Account + two matching Contacts)
@@ -36,14 +37,14 @@ public class EntityMatcherTest {
 
     // Case 1: simulate an error/empty-body from consolidation prompt, expecting
     //         null.
-    mock.setResults(EntityMatcher.PROMPT_TEMPLATE_NAME, null);
+    mock.setResults(PROMPT_TEMPLATE_NAME, null);
     final EntityMatcher.MatchedEntity me = EntityMatcher.findMatchesSingle('mike');
     Assert.isNotNull(me);
     Assert.isNull(me.matches);
 
     // Case 2: return proper consolidated JSON, expecting two matches back
     mock.setResults(
-      EntityMatcher.PROMPT_TEMPLATE_NAME,
+      PROMPT_TEMPLATE_NAME,
       '[{"inputName":"mike","Id":"003SB00000lKdwbYAC","Name":"Michael Jones","confidenceScore":100},{"inputName":"mike","Id":"003SB00000lKduzYAC","Name":"Mike Jones","confidenceScore":80}]'
     );
 
@@ -67,7 +68,7 @@ public class EntityMatcherTest {
       '  {"inputName":"bolt","confidenceScore":0}\n' +
       ']';
 
-    mock.setResults(EntityMatcher.PROMPT_TEMPLATE_NAME, resolvedJson);
+    mock.setResults(PROMPT_TEMPLATE_NAME, resolvedJson);
 
     List<EntityMatcher.InputName> names = new List<EntityMatcher.InputName>{
       newInputName('mike'),
@@ -102,8 +103,7 @@ public class EntityMatcherTest {
   @IsTest
   public static void verifyMatchBatch() {
     EinsteinPromptService.MockExecutor mock = new EinsteinPromptService.MockExecutor();
-    mock.setResultsEmptyArray(EntityMatcher.PROMPT_TEMPLATE_NAME);
-    mock.setResultsEmptyArray(SOSLTokenBuilder.PROMPT_TEMPLATE_NAME);
+    mock.setResultsEmptyArray(PROMPT_TEMPLATE_NAME);
     EinsteinPromptService.setExecutorForTest(mock);
 
     EntityMatcher.Processor p = new EntityMatcher.Processor();
@@ -138,8 +138,8 @@ public class EntityMatcherTest {
 
     // First call should be to the name-variants template
     System.assert(
-      mock.calls.get(0).promptId.equalsIgnoreCase(SOSLTokenBuilder.PROMPT_TEMPLATE_NAME),
-      'First prompt should resolve common_name_variants'
+      mock.calls.get(0).promptId.equalsIgnoreCase(PROMPT_TEMPLATE_NAME),
+      'First prompt should resolve ' + PROMPT_TEMPLATE_NAME
     );
 
     // Remaining calls should be to match_resolved_entities, and together
@@ -147,7 +147,7 @@ public class EntityMatcherTest {
     Integer matchedCount = 0;
     for (Integer c = 1; c < mock.calls.size(); c++) {
       System.assert(
-        mock.calls.get(c).promptId.equalsIgnoreCase(EntityMatcher.PROMPT_TEMPLATE_NAME),
+        mock.calls.get(c).promptId.equalsIgnoreCase(PROMPT_TEMPLATE_NAME),
         'Subsequent prompts should be match_resolved_entities'
       );
 

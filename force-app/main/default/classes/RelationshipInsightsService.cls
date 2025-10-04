@@ -1,4 +1,5 @@
 public with sharing class RelationshipInsightsService {
+  static string PROMPT_APPEND_RELATIONSHIPS = 'RRA_AppendRelationships';
   // The confidence is returned by model and we might need to adjust.
   // We do not want to take answers with small confidence. 68% is 1 sigma.
   public static final Integer MIN_CRM_MATCH_CONFIDENCE = 68;
@@ -81,11 +82,38 @@ public with sharing class RelationshipInsightsService {
   public static List<RelationshipInsightsEnvelope.RelatedEntity> getCrmInsights(
     ICrmReferentialEntity targetEntity
   ) {
+    // check if we have anything in CRM that matches the target entity name.
+    final List<EntityMatcher.EntityInfoMatch> rawMatches = EntityMatcher.findMatchesSingle(
+        targetEntity.getName()
+      )
+      .matches;
+    String excludeId = targetEntity.getId();
     CrmRelationshipInsightsPayloadAssembler asm = new CrmRelationshipInsightsPayloadAssembler();
-    CrmDataDtos.CrmDataPayload payload = asm.build();
+    asm.addEntity(targetEntity);
+    for (EntityMatcher.EntityInfoMatch entityMatch : rawMatches) {
+      asm.addEntity(entityMatch.info);
+    }
+    // this adds CRM data from detected database Ids.
+    asm.build();
+    Integer foundSize = asm.size();
+    if (foundSize == 0) {
+      System.debug('getCrmInsights found no matching records for: ' + targetEntity.getName());
+    } else {
+      System.debug(
+        'getCrmInsights found ' +
+          foundSize.toString() +
+          ' matching records for: ' +
+          targetEntity.getName()
+      );
+    }
+    if (asm.size() < 3) {
+      // CRM data insufficient, add more recent records in hope of getting something useful.
+      System.debug('getCrmInsights will get newest records to try to find more insights');
+      asm.buildWithNewest();
+    }
 
     CrmRelationshipInsightsProcessor proc = new CrmRelationshipInsightsProcessor(targetEntity);
-    return proc.generateInsights(payload);
+    return proc.generateInsights(asm.getPayload());
   }
 
   private static void matchAgainstCrmEntities(
@@ -176,7 +204,7 @@ public with sharing class RelationshipInsightsService {
       );
 
     EinsteinPromptResponse response = EinsteinPromptService.prompt(
-      'RRA_AppendRelationships',
+      PROMPT_APPEND_RELATIONSHIPS,
       inputs
     );
 

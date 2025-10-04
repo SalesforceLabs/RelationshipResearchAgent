@@ -68,12 +68,10 @@ Before installing RRA, ensure your Salesforce org has:
 1. **Configure Salesforce Org Prerequisites**
 
    a. **Enable Agentforce**
-
    - Navigate to **Setup > Agentforce**
    - Enable Agentforce for your org
 
    b. **Create Web Retriever (Agentforce Data Library)**
-
    - Navigate to **Setup > Agentforce Data Library**
    - Click **New**
    - Configure:
@@ -83,13 +81,11 @@ Before installing RRA, ensure your Salesforce org has:
    - Save
 
    c. **Configure Platform Cache**
-
    - Navigate to **Setup > Platform Cache**
    - Create a partition named `rrapicache` (or use your default partition)
    - Allocate memory to both **Org Cache** and **Session Cache**
 
    d. **Disable Data Masking**
-
    - Navigate to **Setup > Einstein Trust Layer**
    - Select **Large Language Model Data Masking**
    - Turn **Off**
@@ -109,7 +105,6 @@ Before installing RRA, ensure your Salesforce org has:
    ```
 
 1. **Activate Custom Record Pages**
-
    - Navigate to **Setup > Lightning App Builder**
    - Open each custom record page:
      - `Account_Record_Page`
@@ -125,7 +120,6 @@ Before installing RRA, ensure your Salesforce org has:
 1. **Verify Prompt Templates**
 
    Navigate to **Setup > Prompt Builder** and verify all templates are active:
-
    - `RRA_CommonNameVariants`
    - `RRA_EntityMatcher`
    - `RRA_EntitiesFromCRM`
@@ -180,6 +174,7 @@ RRA processes relationships asynchronously in the background. To monitor job pro
 - `CrmRelationshipInsightsProcessor` - Orchestrates relationship discovery
 - `DeepWebResearchEngine` - Web research via Agentforce
 - `EntityMatcher` - AI-powered entity resolution
+- `EntityMatcherDataCloud` - Data Cloud subroutines for entity resolution
 - `CrmDatabaseSelectors` - Database queries for CRM data
 - `RelationshipInsightsPersister` - Persists discovered relationships
 
@@ -197,6 +192,10 @@ RRA processes relationships asynchronously in the background. To monitor job pro
 **GenAI Prompt Templates:**
 
 - 7 specialized prompts for entity extraction, matching, consolidation, and web research
+
+### Data Cloud components
+
+- [See DataCloud Readme](./README_DC.md)
 
 ## Development
 

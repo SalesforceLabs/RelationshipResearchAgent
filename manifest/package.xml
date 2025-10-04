@@ -63,13 +63,19 @@
         <members>RRA_CommonNameVariants</members>
         <members>RRA_EntityMatcher</members>
         <members>RRA_EntitiesFromCRM</members>
+        <members>RRA_EntitiesDatacloudSearch</members>
         <members>RRA_ConsolidateInsights</members>
         <members>RRA_AppendRelationships</members>
         <members>RRA_DeepWebResearch_Discovery</members>
         <members>RRA_DeepWebResearch_Refinement</members>
         <name>GenAiPromptTemplate</name>
     </types>
-
+    <!-- Flows -->
+    <types>
+        <members>RRA_EntitiesDatacloudSearch</members>
+        <name>Flow</name>
+    </types>
+  
     <!-- Custom Object -->
     <types>
         <members>RRARelationships__c</members>
