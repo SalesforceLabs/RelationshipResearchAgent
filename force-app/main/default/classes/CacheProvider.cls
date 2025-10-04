@@ -10,16 +10,50 @@ public class CacheProvider {
   private static final Integer SCHEMA_CACHE_TTL = 3600;
   // in-memory cache, for one session.
   private static Map<String, Object> inMemoryCache = new Map<String, Object>();
+  private static final String BASE62 = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+  private static Integer parseHexPair(String hex) {
+    Integer val = 0;
+    for (Integer i = 0; i < 2; i++) {
+      val *= 16;
+      String c = hex.substring(i, i + 1);
+      if (c >= '0' && c <= '9') {
+        val += Integer.valueOf(c);
+      } else if (c >= 'A' && c <= 'F') {
+        val += 10 + c.charAt(0) - 'A'.charAt(0);
+      } else if (c >= 'a' && c <= 'f') {
+        val += 10 + c.charAt(0) - 'a'.charAt(0);
+      }
+    }
+    return val;
+  }
+  private static String getBase62Hash(String input, Integer length) {
+    if (String.isBlank(input) || length <= 0)
+      return null;
 
-  // creates a safe-to-use platform cache key. This might create
-  private static String makeSafePlatformCacheKey(String raw) {
-    // Compute SHA-512 hash of the raw input
-    Blob hashBlob = Crypto.generateDigest('SHA-512', Blob.valueOf(raw));
+    // 1. Compute SHA-256 hash
+    Blob hashBlob = Crypto.generateDigest('SHA-256', Blob.valueOf(input));
     String hashHex = EncodingUtil.convertToHex(hashBlob);
+    // 2. Map each byte to Base62
+    String text = '';
+    for (Integer i = 0; i < hashHex.length() - 1; i += 2) {
+      String hexPair = hashHex.substring(i, i + 2);
+      Integer val = parseHexPair(hexPair); // convert hex to 0-255
+      Integer idx = Math.mod(val, 62); // safe modulo
+      text += BASE62.substring(idx, idx + 1);
+      if (text.length() >= length)
+        break;
+    }
+
+    return text;
+  }
+
+  // creates a safe-to-use platform cache key.
+  private static String makeSafePlatformCacheKey(String raw) {
+    String safe = getBase62Hash(raw, 50);
     // removes any non-allowed characters
-    String safe = hashHex + raw.replaceAll('[^a-zA-Z0-9]', '');
-    if (safe.length() > 256) {
-      safe = safe.substring(0, 256);
+    safe = safe + raw.replaceAll('[^a-zA-Z0-9]', '');
+    if (safe.length() > 50) {
+      safe = safe.substring(0, 50);
     }
     return safe;
   }
@@ -32,14 +66,15 @@ public class CacheProvider {
     String platformCacheKey = makeSafePlatformCacheKey(key);
     try {
       part = Cache.Org.getPartition(CACHE_NAME);
-      Object data = part.get(key);
+      Object data = part.get(platformCacheKey);
       if (provider.restoreFromCache(data)) {
         System.debug('From Platform Cache ' + key);
         return;
       }
     } catch (Exception e) {
       // not a problem - platform cache will not be configured by default.
-      System.debug('Platform Cache error: ' + e.getMessage());
+      String errHeader = 'Platform Cache error for key ' + key + ' in partition ' + CACHE_NAME;
+      System.debug(errHeader + ': ' + e.getMessage());
     }
 
     // Try in-memory fallback
@@ -56,11 +91,13 @@ public class CacheProvider {
     inMemoryCache.put(key, computedCache);
 
     try {
-      part.put(key, computedCache, SCHEMA_CACHE_TTL);
+      if (part != null) {
+        part.put(platformCacheKey, computedCache, SCHEMA_CACHE_TTL);
+      }
     } catch (Exception e) {
       // If platform cache is not available, which is the default,
       // we just log the error and move on.
-      System.debug('Failed to store in Platform Cache: ' + e.getMessage());
+      System.debug('Failed to store in Platform Cache with key :' + key + ': ' + e.getMessage());
     }
   }
 }
