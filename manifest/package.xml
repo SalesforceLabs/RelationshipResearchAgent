@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <!-- Apex Classes -->
+    <types>
+        <members>Benchmarker</members>
+        <members>CacheProvider</members>
+        <members>CrmDatabaseSelectors</members>
+        <members>CrmDataDtos</members>
+        <members>CrmReferentialEntityResolver</members>
+        <members>CrmRelationshipInsightsPayloadAssembler</members>
+        <members>CrmRelationshipInsightsProcessor</members>
+        <members>DeepWebResearchEngine</members>
+        <members>EinsteinPromptRequest</members>
+        <members>EinsteinPromptResponse</members>
+        <members>EinsteinPromptService</members>
+        <members>EntityMatcher</members>
+        <members>EntityMatcherTest</members>
+        <members>ICrmReferentialEntity</members>
+        <members>JsonChunker</members>
+        <members>RecordWebSearchContext</members>
+        <members>RelationshipInsightsEnvelope</members>
+        <members>RelationshipInsightsPersister</members>
+        <members>RelationshipInsightsService</members>
+        <members>RRAClient</members>
+        <members>RRAClientAsync</members>
+        <members>RRADiagnostics</members>
+        <members>RRARelationship</members>
+        <members>SchemaData</members>
+        <members>SchemaDataTest</members>
+        <members>SOSLTokenBuilder</members>
+        <members>SOSLTokenBuilderTest</members>
+        <name>ApexClass</name>
+    </types>
+
+    <!-- Lightning Web Components -->
+    <types>
+        <members>rraComponent</members>
+        <members>rraConfirmMatchModal</members>
+        <members>rraCreateRecordModal</members>
+        <members>rraGraph</members>
+        <name>LightningComponentBundle</name>
+    </types>
+
+    <!-- FlexiPages (Lightning Record Pages) -->
+    <types>
+        <members>Account_Record_Page</members>
+        <members>Contact_Record_Page</members>
+        <members>Lead_Record_Page1</members>
+        <members>Opportunity_Record_Page</members>
+        <name>FlexiPage</name>
+    </types>
+
+    <!-- Static Resources -->
+    <types>
+        <members>d3</members>
+        <members>symbols</members>
+        <members>symbolsutil</members>
+        <name>StaticResource</name>
+    </types>
+
+    <!-- GenAI Prompt Templates -->
+    <types>
+        <members>RRA_CommonNameVariants</members>
+        <members>RRA_EntityMatcher</members>
+        <members>RRA_EntitiesFromCRM</members>
+        <members>RRA_ConsolidateInsights</members>
+        <members>RRA_AppendRelationships</members>
+        <members>RRA_DeepWebResearch_Discovery</members>
+        <members>RRA_DeepWebResearch_Refinement</members>
+        <name>GenAiPromptTemplate</name>
+    </types>
+
+    <!-- Custom Object -->
+    <types>
+        <members>RRARelationships__c</members>
+        <name>CustomObject</name>
+    </types>
+
+    <version>62.0</version>
+</Package>

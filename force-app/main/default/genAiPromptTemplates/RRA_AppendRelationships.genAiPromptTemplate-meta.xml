@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GenAiPromptTemplate xmlns="http://soap.sforce.com/2006/04/metadata">
+    <developerName>RRA_AppendRelationships</developerName>
+    <masterLabel>RRA_AppendRelationships</masterLabel>
+    <templateVersions>
+        <content>You are an expert Knowledge Graph constructor. Your objective is to meticulously analyze the provided text to identify and consolidate relationship entities. 
+
+You will be provided with one set of *existing* entities and one set of *candidate* entities. You should combine the sets in the following manner:
+* Add any entities from the *candidate* set to the *existing* set which are not already present in the *existing* set
+* You should primarily use the &quot;entityName&quot; field when comparing entities. The &quot;entityName&quot; values may not match exactly but may still refer to the same entity. If the match is ambiguous and you do not have high certainly, assume it is the same entity and do NOT add it.
+* You may use other fields from the entity such as &quot;entityType&quot; and &quot;context&quot; to help judge equality.
+* When adding an entity, add ALL fields for that entity and do not alter them. The final results should be a composite of unaltered entities.
+* The final result should include all of the entities from the *existing* set plus any entities from the *candidate* set which were not matched to any entities in the *existing* set.
+* Output the final result as a valid json list. If the result set is empty, output &quot;[]&quot; and NOTHING else.
+
+** The Existing Set of Entities ***
+{!$Input:ExistingRelationships}
+
+** The New Set of Entities ***
+{!$Input:NewRelationships}
+
+
+
+
+
+
+
+</content>
+        <generationTemplateConfigs>
+            <generationConfigDeveloperName>einstein_gpt__enUsLanguageStyle</generationConfigDeveloperName>
+        </generationTemplateConfigs>
+        <inputs>
+            <apiName>ExistingRelationships</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>ExistingRelationships</masterLabel>
+            <referenceName>Input:ExistingRelationships</referenceName>
+            <required>true</required>
+        </inputs>
+        <inputs>
+            <apiName>NewRelationships</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>NewRelationships</masterLabel>
+            <referenceName>Input:NewRelationships</referenceName>
+            <required>true</required>
+        </inputs>
+        <primaryModel>sfdc_ai__DefaultOpenAIGPT4OmniMini</primaryModel>
+        <status>Published</status>
+    </templateVersions>
+    <templateVersions>
+        <content>You are an expert Knowledge Graph constructor. Your objective is to meticulously analyze the provided text to identify and consolidate relationship entities. 
+
+You will be provided with one set of *existing* entities and one set of *candidate* entities. You should combine the sets in the following manner:
+* Add any entities from the *candidate* set to the *existing* set which are not already present in the *existing* set
+* You should primarily use the &quot;entityName&quot; field when comparing entities. The &quot;entityName&quot; values may not match exactly but may still refer to the same entity. If the match is ambiguous and you do not have high certainly that they are a match, assume it is the same entity and do NOT add it.
+* When comparing entity names, disregard differences such as casing differences (lowercase, uppercase, title case), the presence of non-essential articles and prepositions (a, an, the, he, she), legal suffixes (corp, inc, llc,  ltd, etc), top-level domains (.com, .edu, .org, gov), and spacing differences around text. Try to determine if each *candidate* entity refers to an *existing* entity after the entity names have been normalized. For example, a *candidate* entity with the name &quot;Wall Street Journal&quot; should be considered a match to an *existing* entity named &quot;The Wall Street Journal&quot;.   
+* You may use other fields from the entity such as &quot;entityType&quot; and &quot;context&quot; to help judge equality.
+* When adding an entity, add ALL fields for that entity and do not alter them. The final results should be a composite of unaltered entities.
+* The final result should include all of the entities from the *existing* set plus any entities from the *candidate* set which were not matched to any entities in the *existing* set.
+* Output the final result as a valid json list. If the result set is empty, output &quot;[]&quot; and NOTHING else.
+
+** The Existing Set of Entities ***
+{!$Input:ExistingRelationships}
+
+** The New Set of Entities ***
+{!$Input:NewRelationships}
+
+
+
+
+
+
+
+</content>
+        <generationTemplateConfigs>
+            <generationConfigDeveloperName>einstein_gpt__enUsLanguageStyle</generationConfigDeveloperName>
+        </generationTemplateConfigs>
+        <inputs>
+            <apiName>ExistingRelationships</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>ExistingRelationships</masterLabel>
+            <referenceName>Input:ExistingRelationships</referenceName>
+            <required>true</required>
+        </inputs>
+        <inputs>
+            <apiName>NewRelationships</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>NewRelationships</masterLabel>
+            <referenceName>Input:NewRelationships</referenceName>
+            <required>true</required>
+        </inputs>
+        <primaryModel>sfdc_ai__DefaultOpenAIGPT4OmniMini</primaryModel>
+        <status>Published</status>
+    </templateVersions>
+    <templateVersions>
+        <content>You are an expert Knowledge Graph constructor. Your objective is to meticulously analyze the provided text to identify and consolidate relationship entities. 
+
+You will be provided with one set of *existing* entities and one set of *candidate* entities. You should combine the sets in the following manner:
+* Add any entities from the *candidate* set to the *existing* set which are not already present in the *existing* set
+* You should primarily use the &quot;entityName&quot; field when comparing entities. The &quot;entityName&quot; values may not match exactly but may still refer to the same entity. If the match is ambiguous and you do not have high certainly that they are a match, assume it is the same entity and do NOT add it.
+* When comparing entity names, disregard differences such as casing differences (lowercase, uppercase, title case), the presence of non-essential articles and prepositions (a, an, the, he, she), legal suffixes (corp, inc, llc,  ltd, etc), top-level domains (.com, .edu, .org, gov), and spacing differences around text. Try to determine if each *candidate* entity refers to an *existing* entity after the entity names have been normalized. For example, a *candidate* entity with the name &quot;Wall Street Journal&quot; should be considered a match to an *existing* entity named &quot;The Wall Street Journal&quot;.   
+* You may use other fields from the entity such as &quot;entityType&quot; and &quot;context&quot; to help judge equality.
+* When adding an entity, add ALL fields for that entity and do not alter them. The final results should be a composite of unaltered entities.
+* The final result should include all of the entities from the *existing* set plus any entities from the *candidate* set which were not matched to any entities in the *existing* set.
+* Output the final result as a valid json list. If the result set is empty, output &quot;[]&quot; and NOTHING else.
+
+** The Existing Set of Entities ***
+{!$Input:ExistingRelationships}
+
+** The New Set of Entities ***
+{!$Input:NewRelationships}
+
+
+
+
+
+
+
+</content>
+        <generationTemplateConfigs>
+            <generationConfigDeveloperName>einstein_gpt__enUsLanguageStyle</generationConfigDeveloperName>
+        </generationTemplateConfigs>
+        <inputs>
+            <apiName>ExistingRelationships</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>ExistingRelationships</masterLabel>
+            <referenceName>Input:ExistingRelationships</referenceName>
+            <required>true</required>
+        </inputs>
+        <inputs>
+            <apiName>NewRelationships</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>NewRelationships</masterLabel>
+            <referenceName>Input:NewRelationships</referenceName>
+            <required>true</required>
+        </inputs>
+        <primaryModel>sfdc_ai__DefaultOpenAIGPT4OmniMini</primaryModel>
+        <status>Published</status>
+    </templateVersions>
+    <type>einstein_gpt__flex</type>
+    <visibility>Global</visibility>
+</GenAiPromptTemplate>

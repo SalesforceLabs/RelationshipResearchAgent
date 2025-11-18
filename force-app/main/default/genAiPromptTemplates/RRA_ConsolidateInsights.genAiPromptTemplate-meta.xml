@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GenAiPromptTemplate xmlns="http://soap.sforce.com/2006/04/metadata">
+    <developerName>RRA_ConsolidateInsights</developerName>
+    <masterLabel>RRA_ConsolidateInsights</masterLabel>
+    <templateVersions>
+        <content>You are a CRM knowledge graph optimizer. You will receive a JSON array containing multiple preliminary relationship insights, potentially with overlapping or duplicate entries. Your task is to consolidate and rank these insights to produce a clean, non-redundant set of the most credible and relevant relationships.
+
+Your objective:
+Filter, deduplicate, and return only the best relationship insights involving the following referential entity:
+{!$Input:TargetEntity}
+
+Output Format:
+Return a clean JSON list of deduplicated, validated relationship objects with the same schema.
+
+Instructions:
+1. Entity filter: Only retain relationships involving the referential entity (as subject or object). Discard others.
+
+2. Deduplication:
+ For any (subjectName, objectName) pair, retain only the strongest relationship. If multiple predicates exist, retain the one with highest business significance per this ranking:
+ 1. is CEO of
+ 2. is founder of
+ 3. is chair of
+ 4. invested in
+ 5. owns
+ 6. acquired
+ 7. served on board of
+ 8. was employed by
+ 9. was mentor to
+ 10. was business partner of
+ 11. is competitor of
+
+3. Validation:
+ * Ensure each retained object includes all required fields and refers to named people or companies.
+ * Discard if either subject or object is anonymous, generic, or implausible.
+
+4. Ranking &amp;amp; Relevance:
+ * Remove vague or unsupported relationships.
+
+ * Prioritize based on:
+  - Strength of predicate (per above)
+  - Specificity of context and citation
+  - Clarity of named entities
+
+5. Citation Check:
+ Every relationship must include a meaningful citation or say:
+ &amp;quot;Inferred from multiple statements regarding […]&amp;quot;
+
+6. If no valid relationships remain after filtering, return: []
+
+7. Only output the final JSON list; no preamble, explanation, or surrounding text.
+
+Input in the form of a JSON array of unranked relationship objects:
+---
+{!$Input:ExtractedInsights}
+---
+
+</content>
+        <inputs>
+            <apiName>TargetEntity</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>TargetEntity</masterLabel>
+            <referenceName>Input:TargetEntity</referenceName>
+            <required>true</required>
+        </inputs>
+        <inputs>
+            <apiName>ExtractedInsights</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>ExtractedInsights</masterLabel>
+            <referenceName>Input:ExtractedInsights</referenceName>
+            <required>true</required>
+        </inputs>
+        <primaryModel>sfdc_ai__DefaultGPT4Omni</primaryModel>
+        <status>Published</status>
+    </templateVersions>
+    <templateVersions>
+        <content>You are a CRM knowledge graph optimizer. You will receive a JSON array containing multiple preliminary relationship insights, potentially with overlapping or duplicate entries. Your task is to consolidate and rank these insights to produce a clean, non-redundant set of the most credible and relevant relationships.
+
+Your objective:
+Filter, deduplicate, and return only the best relationship insights involving the following referential entity:
+{!$Input:TargetEntity}
+
+Output Format:
+Return a clean JSON list of deduplicated, validated relationship objects with the same schema.
+
+Instructions:
+1. Entity filter: Only retain relationships involving the referential entity (as subject or object). Discard others.
+
+2. Deduplication:
+ For any (subjectName, objectName) pair, retain only the strongest relationship. If multiple predicates exist, retain the one with highest business significance per this ranking:
+ 1. is CEO of
+ 2. is founder of
+ 3. is chair of
+ 4. invested in
+ 5. owns
+ 6. acquired
+ 7. served on board of
+ 8. was employed by
+ 9. was mentor to
+ 10. was business partner of
+ 11. is competitor of
+
+3. Validation:
+ * Ensure each retained object includes all required fields and refers to named people or companies.
+ * Discard if either subject or object is anonymous, generic, or implausible.
+
+4. Ranking &amp;amp; Relevance:
+ * Remove vague or unsupported relationships.
+
+ * Prioritize based on:
+  - Strength of predicate (per above)
+  - Specificity of context and citation
+  - Clarity of named entities
+
+5. Citation Check:
+ Every relationship must include a meaningful citation or say:
+ &amp;quot;Inferred from multiple statements regarding […]&amp;quot;
+
+6. If no valid relationships remain after filtering, return: []
+
+7. Only output the final JSON list; no preamble, explanation, or surrounding text.
+
+Input in the form of a JSON array of unranked relationship objects:
+---
+{!$Input:ExtractedInsights}
+---
+
+</content>
+        <inputs>
+            <apiName>TargetEntity</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>TargetEntity</masterLabel>
+            <referenceName>Input:TargetEntity</referenceName>
+            <required>true</required>
+        </inputs>
+        <inputs>
+            <apiName>ExtractedInsights</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>ExtractedInsights</masterLabel>
+            <referenceName>Input:ExtractedInsights</referenceName>
+            <required>true</required>
+        </inputs>
+        <primaryModel>sfdc_ai__DefaultGPT4Omni</primaryModel>
+        <status>Published</status>
+    </templateVersions>
+    <type>einstein_gpt__flex</type>
+    <visibility>Global</visibility>
+</GenAiPromptTemplate>

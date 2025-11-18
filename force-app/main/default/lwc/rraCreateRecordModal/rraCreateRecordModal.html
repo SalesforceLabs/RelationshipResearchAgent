@@ -1,0 +1,115 @@
+<template>
+  <template if:true={isOpen}>
+    <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+      <div class="slds-modal__container slds-border_radius-medium">
+        <header class="slds-modal__header">
+          <button
+            class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse slds-g-radius-border-circle"
+            title="Close"
+            onclick={handleClose}
+          >
+            <lightning-icon
+              icon-name="utility:close"
+              alternative-text="close"
+              size="small"
+            ></lightning-icon>
+            <span class="slds-assistive-text">Close</span>
+          </button>
+          <h2 class="slds-text-heading_medium slds-hyphenate">Create {recordTypeLabel}</h2>
+        </header>
+
+        <div class="slds-modal__content slds-var-p-around_medium">
+          <!-- Dynamic Record Edit Form -->
+          <lightning-record-edit-form
+            object-api-name={objectApiName}
+            onsuccess={handleRecordSuccess}
+            onerror={handleRecordError}
+          >
+            <template if:true={isContactForm}>
+              <div class="slds-form-element slds-form-element_compound">
+                <div class="slds-form-element__control">
+                  <div class="slds-form-element__group">
+                    <div class="slds-form-element__row">
+                      <div class="slds-form-element slds-form-element_compound slds-size_1-of-2">
+                        <lightning-input-field
+                          field-name="FirstName"
+                          value={defaultFieldValues.FirstName}
+                        ></lightning-input-field>
+                      </div>
+                      <div class="slds-form-element slds-form-element_compound slds-size_1-of-2">
+                        <lightning-input-field
+                          field-name="LastName"
+                          value={defaultFieldValues.LastName}
+                        ></lightning-input-field>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <lightning-input-field field-name="Email"></lightning-input-field>
+              <lightning-input-field field-name="Phone"></lightning-input-field>
+              <lightning-input-field field-name="Title"></lightning-input-field>
+              <lightning-input-field field-name="AccountId"></lightning-input-field>
+            </template>
+
+            <template if:true={isAccountForm}>
+              <lightning-input-field
+                field-name="Name"
+                value={defaultFieldValues.Name}
+              ></lightning-input-field>
+              <lightning-input-field field-name="Type"></lightning-input-field>
+              <lightning-input-field field-name="Industry"></lightning-input-field>
+              <lightning-input-field field-name="Phone"></lightning-input-field>
+              <lightning-input-field field-name="Website"></lightning-input-field>
+
+              <div class="slds-form-element slds-form-element_compound">
+                <fieldset class="slds-form-element">
+                  <legend class="slds-form-element__legend slds-form-element__label">
+                    Billing Address
+                  </legend>
+                  <div class="slds-form-element__control">
+                    <div class="slds-form-element__group">
+                      <div class="slds-form-element__row">
+                        <div class="slds-form-element slds-form-element_compound slds-size_1-of-1">
+                          <lightning-input-field field-name="BillingStreet"></lightning-input-field>
+                        </div>
+                      </div>
+                      <div class="slds-form-element__row">
+                        <div class="slds-form-element slds-form-element_compound slds-size_1-of-2">
+                          <lightning-input-field field-name="BillingCity"></lightning-input-field>
+                        </div>
+                        <div class="slds-form-element slds-form-element_compound slds-size_1-of-2">
+                          <lightning-input-field field-name="BillingState"></lightning-input-field>
+                        </div>
+                      </div>
+                      <div class="slds-form-element__row">
+                        <div class="slds-form-element slds-form-element_compound slds-size_1-of-2">
+                          <lightning-input-field
+                            field-name="BillingPostalCode"
+                          ></lightning-input-field>
+                        </div>
+                        <div class="slds-form-element slds-form-element_compound slds-size_1-of-2">
+                          <lightning-input-field
+                            field-name="BillingCountry"
+                          ></lightning-input-field>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </fieldset>
+              </div>
+            </template>
+          </lightning-record-edit-form>
+        </div>
+
+        <footer class="slds-modal__footer">
+          <button class="slds-button slds-button_neutral" onclick={handleClose}>Cancel</button>
+          <button class="slds-button slds-button_brand" onclick={handleSave} disabled={isCreating}>
+            {saveButtonLabel}
+          </button>
+        </footer>
+      </div>
+    </section>
+    <div class="slds-backdrop slds-backdrop_open"></div>
+  </template>
+</template>

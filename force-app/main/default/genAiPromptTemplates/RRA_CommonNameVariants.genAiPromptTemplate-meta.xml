@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GenAiPromptTemplate xmlns="http://soap.sforce.com/2006/04/metadata">
+    <developerName>RRA_CommonNameVariants</developerName>
+    <masterLabel>RRA_CommonNameVariants</masterLabel>
+    <templateVersions>
+        <content>You are analyzing the entity named `{!$Input:Name}`. Your goal is to generate a comprehensive list of plausible and commonly used name variants that may appear in public, business, or legal contexts.
+
+Variant rules:
+
+People
+
+* Include common nicknames/diminutives and short forms for the detected language(s) (e.g., “michael” → “mike”, “mikey”; “elizabeth” → “liz”, “beth”; “alexander” → “alex”). Prefer only well-established nicknames.
+* Include initialed forms that preserve the full surname (e.g., “m. smith”, “mj smith” if a middle/second given name/initial is present in the input or widely known).
+* Include with/without middle names/initials exactly as present in input (do not invent unseen middle names).
+* Preserve suffixes when present (e.g., “jr”, “sr”, “ii”, “iii”), and also include the no-suffix counterpart if both forms are commonly used in business contexts.
+* Include hyphenation, spacing, and punctuation variants that are customary (e.g., “anne-marie” ↔ “annemarie”; “o’connor” ↔ “oconnor”).
+* Include diacritic and diacritic-stripped versions (e.g., “josé garcía” and “jose garcia”).
+* Include common transliterations/romanizations and name-order swaps when culturally applicable (e.g., “zhang wei” ↔ “wei zhang”), but avoid speculative forms.
+* Include maiden/married/stage/pen/known-as names if they are widely used in public/business contexts for the same person.
+* Exclude honorifics/titles (e.g., “dr”, “prof”), email handles, and bare given/surname alone unless the person is mononymous in business use.
+
+Organizations
+
+* Include the legal name exactly as given and variants differing only by punctuation/casing/spacing (“&amp;” ↔ “and”, hyphens, periods).
+* Include legal suffix variants where interchangeable in records: “inc”/“inc.”, “corp”/“corporation”, “co”/“company”, “llc”, “ltd”/“limited”, “gmbh”, “ag”, “sa”, “spa”, etc., keeping regionally appropriate forms. Include with and without punctuation.
+* Include acronyms/initialisms and the expanded form (e.g., “international business machines” ↔ “ibm”).
+* Include dba/brand/aka/ formerly known as names if widely used in commerce.
+* Include diacritic-stripped and transliterated forms when applicable.
+* Optionally include article variants where customary (“the x company” ↔ “x company”).
+* Exclude URLs, @handles, slogans, and product names unless they are documented DBA/AKA names of the entity.
+
+General normalization
+
+* Trim whitespace; collapse multiple spaces to one.
+* Lowercase everything; keep only ASCII for the diacritic-stripped alternates while also retaining the original diacritic form when applicable.
+* Do not fabricate unseen data (e.g., unknown middle names, speculative nicknames, or unsubstantiated aliases).
+* If the input appears ambiguous (e.g., could be person or org), produce variants for the most likely interpretation but avoid far-fetched expansions.
+
+Output requirements:
+
+* Return only a valid JSON array of strings, UTF-8 encoded.
+* Each string must be strictly lowercase.
+* Do not include any envelope object, comments, labels, or markdown — array only.
+* Deduplicate exact and near-duplicates (after trimming and normalizing whitespace).
+* Sort with the normalized input first, then by likely business prevalence, then alphabetically.
+
+Return the final result as a JSON array only.
+
+</content>
+        <inputs>
+            <apiName>Name</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>Name</masterLabel>
+            <referenceName>Input:Name</referenceName>
+            <required>true</required>
+        </inputs>
+        <primaryModel>sfdc_ai__DefaultGPT41Mini</primaryModel>
+        <status>Published</status>
+    </templateVersions>
+    <templateVersions>
+        <content>You are analyzing the entity named `{!$Input:Name}`. Your goal is to generate a comprehensive list of plausible and commonly used name variants that may appear in public, business, or legal contexts.
+
+Variant rules:
+
+People
+
+* Include common nicknames/diminutives and short forms for the detected language(s) (e.g., “michael” → “mike”, “mikey”; “elizabeth” → “liz”, “beth”; “alexander” → “alex”). Prefer only well-established nicknames.
+* Include initialed forms that preserve the full surname (e.g., “m. smith”, “mj smith” if a middle/second given name/initial is present in the input or widely known).
+* Include with/without middle names/initials exactly as present in input (do not invent unseen middle names).
+* Preserve suffixes when present (e.g., “jr”, “sr”, “ii”, “iii”), and also include the no-suffix counterpart if both forms are commonly used in business contexts.
+* Include hyphenation, spacing, and punctuation variants that are customary (e.g., “anne-marie” ↔ “annemarie”; “o’connor” ↔ “oconnor”).
+* Include diacritic and diacritic-stripped versions (e.g., “josé garcía” and “jose garcia”).
+* Include common transliterations/romanizations and name-order swaps when culturally applicable (e.g., “zhang wei” ↔ “wei zhang”), but avoid speculative forms.
+* Include maiden/married/stage/pen/known-as names if they are widely used in public/business contexts for the same person.
+* Exclude honorifics/titles (e.g., “dr”, “prof”), email handles, and bare given/surname alone unless the person is mononymous in business use.
+
+Organizations
+
+* Include the legal name exactly as given and variants differing only by punctuation/casing/spacing (“&amp;” ↔ “and”, hyphens, periods).
+* Include legal suffix variants where interchangeable in records: “inc”/“inc.”, “corp”/“corporation”, “co”/“company”, “llc”, “ltd”/“limited”, “gmbh”, “ag”, “sa”, “spa”, etc., keeping regionally appropriate forms. Include with and without punctuation.
+* Include acronyms/initialisms and the expanded form (e.g., “international business machines” ↔ “ibm”).
+* Include dba/brand/aka/ formerly known as names if widely used in commerce.
+* Include diacritic-stripped and transliterated forms when applicable.
+* Optionally include article variants where customary (“the x company” ↔ “x company”).
+* Exclude URLs, @handles, slogans, and product names unless they are documented DBA/AKA names of the entity.
+
+General normalization
+
+* Trim whitespace; collapse multiple spaces to one.
+* Lowercase everything; keep only ASCII for the diacritic-stripped alternates while also retaining the original diacritic form when applicable.
+* Do not fabricate unseen data (e.g., unknown middle names, speculative nicknames, or unsubstantiated aliases).
+* If the input appears ambiguous (e.g., could be person or org), produce variants for the most likely interpretation but avoid far-fetched expansions.
+
+Output requirements:
+
+* Return only a valid JSON array of strings, UTF-8 encoded.
+* Each string must be strictly lowercase.
+* Do not include any envelope object, comments, labels, or markdown — array only.
+* Deduplicate exact and near-duplicates (after trimming and normalizing whitespace).
+* Sort with the normalized input first, then by likely business prevalence, then alphabetically.
+
+Return the final result as a JSON array only.
+
+</content>
+        <inputs>
+            <apiName>Name</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>Name</masterLabel>
+            <referenceName>Input:Name</referenceName>
+            <required>true</required>
+        </inputs>
+        <primaryModel>sfdc_ai__DefaultGPT41Mini</primaryModel>
+        <status>Published</status>
+    </templateVersions>
+    <type>einstein_gpt__flex</type>
+    <visibility>Global</visibility>
+</GenAiPromptTemplate>
