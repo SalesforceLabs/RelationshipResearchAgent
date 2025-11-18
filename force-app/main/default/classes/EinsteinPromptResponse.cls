@@ -74,7 +74,9 @@ public with sharing class EinsteinPromptResponse {
     // This handles cases where LLM adds conversational text before/after JSON
     String extracted = extractFirstJsonFromText(body);
     if (String.isNotBlank(extracted) && isLikelyJson(extracted)) {
-      System.debug('Warning: Extracted JSON from conversational response. Prompt may need adjustment.');
+      System.debug(
+        'Warning: Extracted JSON from conversational response. Prompt may need adjustment.'
+      );
       return extracted;
     }
 
@@ -110,7 +112,12 @@ public with sharing class EinsteinPromptResponse {
   }
 
   // Extract balanced JSON structure starting from a given index
-  private static String extractBalancedJson(String text, Integer startIndex, String openChar, String closeChar) {
+  private static String extractBalancedJson(
+    String text,
+    Integer startIndex,
+    String openChar,
+    String closeChar
+  ) {
     if (startIndex < 0 || startIndex >= text.length()) {
       return null;
     }

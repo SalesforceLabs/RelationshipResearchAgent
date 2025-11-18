@@ -281,7 +281,7 @@ public with sharing class DeepWebResearchEngine {
 
     // Use EinsteinPromptResponse.getJson() which handles conversational responses and extraction
     Object refinedResultDeserialized = response.getJson();
-    
+
     if (refinedResultDeserialized != null) {
       // Verify it's a list (expected format)
       if (refinedResultDeserialized instanceof List<Object>) {
@@ -289,7 +289,9 @@ public with sharing class DeepWebResearchEngine {
         if (!refinedList.isEmpty()) {
           // Store the clean JSON string for output
           stage.stageOutput = JSON.serialize(refinedResultDeserialized);
-          diag.get('DeepWebResearch').get('Stage3').put('refinedResults', refinedResultDeserialized);
+          diag.get('DeepWebResearch')
+            .get('Stage3')
+            .put('refinedResults', refinedResultDeserialized);
           System.debug('Stage 3: Successfully refined relationships');
         } else {
           stage.stageOutput = '[]';
@@ -298,7 +300,10 @@ public with sharing class DeepWebResearchEngine {
         }
       } else {
         // Unexpected format - log and handle gracefully
-        System.debug(LoggingLevel.WARN, 'Stage 3: Refinement returned non-list format: ' + refinedResultDeserialized);
+        System.debug(
+          LoggingLevel.WARN,
+          'Stage 3: Refinement returned non-list format: ' + refinedResultDeserialized
+        );
         stage.stageOutput = '[]';
         diag.get('DeepWebResearch').get('Stage3').put('refinedResults', new List<Object>());
       }
@@ -306,7 +311,10 @@ public with sharing class DeepWebResearchEngine {
       // Failed to parse - likely conversational response with no extractable JSON
       String rawText = response.getText();
       if (String.isNotBlank(rawText)) {
-        System.debug(LoggingLevel.WARN, 'Stage 3: Failed to extract valid JSON from response: ' + rawText.left(200));
+        System.debug(
+          LoggingLevel.WARN,
+          'Stage 3: Failed to extract valid JSON from response: ' + rawText.left(200)
+        );
       } else {
         System.debug(LoggingLevel.WARN, 'Stage 3: Empty response from refinement template');
       }
@@ -365,7 +373,6 @@ public with sharing class DeepWebResearchEngine {
 
     return searchTerms;
   }
-
 
   /**
    * Aggregate multiple JSON results into a single consolidated result

@@ -48,7 +48,11 @@ public class EinsteinPromptResponseTest {
     EinsteinPromptResponse response = createMockResponse(jsonText);
 
     List<Object> resultList = response.getJsonList();
-    Assert.areEqual(1, resultList.size(), 'Should extract JSON from markdown fence without json tag');
+    Assert.areEqual(
+      1,
+      resultList.size(),
+      'Should extract JSON from markdown fence without json tag'
+    );
   }
 
   @IsTest
@@ -81,9 +85,13 @@ public class EinsteinPromptResponseTest {
     Assert.areEqual(1, resultList.size(), 'Should handle escaped quotes');
 
     Map<String, Object> item = (Map<String, Object>) resultList[0];
-    Assert.isTrue(
-      ((String) item.get('description')).contains('hello'),
-      'Should preserve escaped quotes in string'
+    String description = (String) item.get('description');
+
+    // Be strict: make sure the quotes survived correctly.
+    Assert.areEqual(
+      'He said "hello" to me',
+      description,
+      'Should preserve escaped quotes exactly in the parsed string'
     );
   }
 
@@ -219,7 +227,11 @@ public class EinsteinPromptResponseTest {
     EinsteinPromptResponse response = createMockResponse(jsonText);
 
     List<Object> resultList = response.getJsonList();
-    Assert.areEqual(1, resultList.size(), 'Should extract JSON from real-world conversational response');
+    Assert.areEqual(
+      1,
+      resultList.size(),
+      'Should extract JSON from real-world conversational response'
+    );
 
     Map<String, Object> entity = (Map<String, Object>) resultList[0];
     Assert.areEqual('Microsoft Corporation', entity.get('entityName'));
@@ -246,9 +258,21 @@ public class EinsteinPromptResponseTest {
     String fencedJson = '```json\n[{"test":"value"}]\n```';
     String unfenced = EinsteinPromptResponse.unfenceJson(fencedJson);
 
+    // Be strict: we expect exactly the JSON body inside the fence.
     Assert.isNotNull(unfenced, 'Should unfence JSON');
-    Assert.isTrue(unfenced.startsWith('['), 'Should start with array bracket');
-    Assert.isTrue(unfenced.endsWith(']'), 'Should end with array bracket');
+    Assert.areEqual(
+      '[{"test":"value"}]',
+      unfenced,
+      'Should return the raw JSON payload without fences or extra whitespace'
+    );
+
+    // Optional: sanity-check that what we returned is actually valid JSON.
+    Object parsed = EinsteinPromptResponse.parseJson(unfenced);
+    Assert.isNotNull(parsed, 'Unfenced JSON should be parseable');
+    Assert.isTrue(
+      parsed instanceof List<Object>,
+      'Unfenced JSON should still be a valid JSON array'
+    );
   }
 
   @IsTest
@@ -315,4 +339,3 @@ public class EinsteinPromptResponseTest {
     Assert.areEqual(100, resultList.size(), 'Should handle large JSON arrays');
   }
 }
-
