@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GenAiPromptTemplate xmlns="http://soap.sforce.com/2006/04/metadata">
+    <developerName>RRA_EntitiesFromCRM</developerName>
+    <masterLabel>RRA_EntitiesFromCRM</masterLabel>
+    <templateVersions>
+        <content>You are an expert CRM Knowledge Graph constructor. Your objective is to meticulously analyze the provided CRM payload to identify direct business, operational, or influential relationships that involve the following referential entity:
+
+```
+{!$Input:TargetEntity}
+```
+
+Our extraction should focus on:
+1. Key named entities: **only** CRM Contacts (people) and Accounts (companies).  
+2. Relationships between those entities: Identify how Contacts and Accounts are connected through substantive business interactions.  
+3. Inferred relationships: Go beyond explicitly stated facts. Infer only highly likely relationships that imply a genuine business connection.
+
+Output Format:
+
+Provide the output as a JSON list of objects, where each object represents a relationship. Each object must include:
+
+* `subjectName`: The name of the Person or Company initiating or possessing the relationship.
+* `recordId` – the record ID of the Contact or Account.
+* `recordType – the type of the record in lowercase; e.g. &amp;quot;contact&amp;quot; or &amp;quot;account.
+* `predicate` – the relationship type (see prioritization below).  
+* `objectName`: The name of the Person or Company that is the target of the relationship.
+* `entityType`: One of &quot;Person&quot; or &quot;Organization&quot; corresponding to `objectName`.
+* `context` – concise explanation of the relationship, citing specific cues.  
+* `citation` – a short quote from the payload that substantiates the relationship, or “Inferred from multiple statements regarding […]” if synthesized from several facts.
+
+Targeting Constraints:
+
+* For any unique pair (`subjectName`, `objectName`) output **one** relationship, chosen by the following priority (highest → lowest):  
+ 1 Leadership roles (`is CEO of`, `is founder of`, `is chair of`)  
+ 2 Ownership / investment (`invested in`, `owns`, `acquired`)  
+ 3 Formal governance roles (`served on board of`)  
+ 4 Employment (`was employed by`)  
+ 5 Mentorship / influence (`was mentor to`)  
+ 6 Strategic or business partner (`was business partner of`)  
+ 7 Competitive relationship (`is competitor of`)
+
+General Constraints:
+
+* Relationships not involving the referential entity should be excluded.
+* Only named, real-world Contacts and Accounts; ignore products, abstract concepts, numerical data.  
+* Relationships must denote a direct business, operational, or influential connection.  
+* Resolve pronouns / variants to canonical entity names.  
+* Do **not** infer affiliation, role, or employment unless clearly stated or strongly implied as a substantive connection.  
+* Ignore topics outside CRM contacts/accounts scope.  
+* If no qualifying relationships are found, return `[]` (and nothing else).
+
+Text to Analyze (CRM payload):
+---
+{!$Input:CRMData}
+---
+
+</content>
+        <inputs>
+            <apiName>TargetEntity</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>TargetEntity</masterLabel>
+            <referenceName>Input:TargetEntity</referenceName>
+            <required>true</required>
+        </inputs>
+        <inputs>
+            <apiName>CRMData</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>CRMData</masterLabel>
+            <referenceName>Input:CRMData</referenceName>
+            <required>true</required>
+        </inputs>
+        <primaryModel>sfdc_ai__DefaultGPT4Omni</primaryModel>
+        <status>Published</status>
+    </templateVersions>
+    <templateVersions>
+        <content>You are an expert CRM Knowledge Graph constructor. Your objective is to meticulously analyze the provided CRM payload to identify direct business, operational, or influential relationships that involve the following referential entity:
+
+```
+{!$Input:TargetEntity}
+```
+
+Our extraction should focus on:
+1. Key named entities: **only** CRM Contacts (people) and Accounts (companies).  
+2. Relationships between those entities: Identify how Contacts and Accounts are connected through substantive business interactions.  
+3. Inferred relationships: Go beyond explicitly stated facts. Infer only highly likely relationships that imply a genuine business connection.
+
+Output Format:
+
+Provide the output as a JSON list of objects, where each object represents a relationship. Each object must include:
+
+* `entityName`: The name of the Person or Company which has a relationship to `{!$Input:TargetEntity}`
+* `canonicalName`: By default, this is the same value as `entityName`. If multiple relationships with the same entity exist, this value will have a single canonical representation of that entity name (which may have slight differences in the source text).
+* `entityType`: One of &quot;Person&quot; or &quot;Organization&quot; corresponding to `entityName`.
+* `predicate` – the relationship type (see prioritization below).  
+* `recordId` – the record ID of the Contact or Account.
+* `recordType – the type of the record in lowercase; e.g. &amp;quot;contact&amp;quot; or &amp;quot;account.
+* `citation` – a short quote from the payload that substantiates the relationship, or “Inferred from multiple statements regarding […]” if synthesized from several facts.
+* `context` – concise explanation of the relationship, citing specific cues.  
+
+Targeting Constraints:
+
+* For any unique relationship to `canonicalName` output **one** relationship, chosen by the following priority (highest → lowest):  
+ 1 Leadership roles (`is CEO of`, `is founder of`, `is chair of`)  
+ 2 Ownership / investment (`invested in`, `owns`, `acquired`)  
+ 3 Formal governance roles (`served on board of`)  
+ 4 Employment (`was employed by`)  
+ 5 Mentorship / influence (`was mentor to`)  
+ 6 Strategic or business partner (`was business partner of`)  
+ 7 Competitive relationship (`is competitor of`)
+
+General Constraints:
+
+* Relationships not involving the referential entity should be excluded.
+* Only named, real-world Contacts and Accounts; ignore products, abstract concepts, numerical data.  
+* Relationships must denote a direct business, operational, or influential connection.  
+* Resolve pronouns / variants to canonical entity names.  
+* Do **not** infer affiliation, role, or employment unless clearly stated or strongly implied as a substantive connection.  
+* Ignore topics outside CRM contacts/accounts scope.  
+* If no qualifying relationships are found, return `[]` (and nothing else).
+
+
+Example:
+If we are analyzing relationships of Jane Doe and have text that shows &quot;John Smith is a contact of Jane Doe&quot;
+infer: { &quot;entityName&quot;: &quot;John Smith&quot;, &quot;canonicalName&quot;: &quot;John Smith&quot;, &quot;entityType&quot;: &quot;Person&quot;, &quot;recordId&quot;: &quot;12345&quot;, &quot;recordType&quot;: &quot;contact&quot;, &quot;predicate&quot;: &quot;has contact&quot;, &quot;context&quot;: &quot;John Smith is a contact of Jane Doe, &quot;citation&quot;: &quot;John Smith was added as contact to Jane Doe&quot;}
+
+Text to Analyze (CRM payload):
+---
+{!$Input:CRMData}
+---
+
+</content>
+        <inputs>
+            <apiName>TargetEntity</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>TargetEntity</masterLabel>
+            <referenceName>Input:TargetEntity</referenceName>
+            <required>true</required>
+        </inputs>
+        <inputs>
+            <apiName>CRMData</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>CRMData</masterLabel>
+            <referenceName>Input:CRMData</referenceName>
+            <required>true</required>
+        </inputs>
+        <primaryModel>sfdc_ai__DefaultGPT4Omni</primaryModel>
+        <status>Published</status>
+    </templateVersions>
+    <templateVersions>
+        <content>You are an expert CRM Knowledge Graph constructor. Your objective is to meticulously analyze the provided CRM payload to identify direct business, operational, or influential relationships that involve the following referential entity:
+
+```
+{!$Input:TargetEntity}
+```
+
+Our extraction should focus on:
+1. Key named entities: **only** CRM Contacts (people) and Accounts (companies).  
+2. Relationships between those entities: Identify how Contacts and Accounts are connected through substantive business interactions.  
+3. Inferred relationships: Go beyond explicitly stated facts. Infer only highly likely relationships that imply a genuine business connection.
+
+Output Format:
+
+Provide the output as a JSON list of objects, where each object represents a relationship. Each object must include:
+
+* `entityName`: The name of the Person or Company which has a relationship to `{!$Input:TargetEntity}`
+* `canonicalName`: By default, this is the same value as `entityName`. If multiple relationships with the same entity exist, this value will have a single canonical representation of that entity name (which may have slight differences in the source text).
+* `entityType`: One of &quot;Person&quot; or &quot;Organization&quot; corresponding to `entityName`.
+* `predicate` – the relationship type (see prioritization below).  
+* `recordId` – the record ID of the Contact or Account.
+* `recordType – the type of the record in lowercase; e.g. &amp;quot;contact&amp;quot; or &amp;quot;account.
+* `citation` – a short quote from the payload that substantiates the relationship, or “Inferred from multiple statements regarding […]” if synthesized from several facts.
+* `context` – concise explanation of the relationship, citing specific cues.  
+
+Targeting Constraints:
+
+* For any unique relationship to `canonicalName` output **one** relationship, chosen by the following priority (highest → lowest):  
+ 1 Leadership roles (`is CEO of`, `is founder of`, `is chair of`)  
+ 2 Ownership / investment (`invested in`, `owns`, `acquired`)  
+ 3 Formal governance roles (`served on board of`)  
+ 4 Employment (`was employed by`)  
+ 5 Mentorship / influence (`was mentor to`)  
+ 6 Strategic or business partner (`was business partner of`)  
+ 7 Competitive relationship (`is competitor of`)
+
+General Constraints:
+
+* Relationships not involving the referential entity should be excluded.
+* Only named, real-world Contacts and Accounts; ignore products, abstract concepts, numerical data.  
+* Relationships must denote a direct business, operational, or influential connection.  
+* Resolve pronouns / variants to canonical entity names.  
+* Do **not** infer affiliation, role, or employment unless clearly stated or strongly implied as a substantive connection.  
+* Ignore topics outside CRM contacts/accounts scope.  
+* If no qualifying relationships are found, return `[]` (and nothing else).
+
+
+Example:
+If we are analyzing relationships of Jane Doe and have text that shows &quot;John Smith is a contact of Jane Doe&quot;
+infer: { &quot;entityName&quot;: &quot;John Smith&quot;, &quot;canonicalName&quot;: &quot;John Smith&quot;, &quot;entityType&quot;: &quot;Person&quot;, &quot;recordId&quot;: &quot;12345&quot;, &quot;recordType&quot;: &quot;contact&quot;, &quot;predicate&quot;: &quot;has contact&quot;, &quot;context&quot;: &quot;John Smith is a contact of Jane Doe, &quot;citation&quot;: &quot;John Smith was added as contact to Jane Doe&quot;}
+
+Text to Analyze (CRM payload):
+---
+{!$Input:CRMData}
+---
+
+</content>
+        <inputs>
+            <apiName>TargetEntity</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>TargetEntity</masterLabel>
+            <referenceName>Input:TargetEntity</referenceName>
+            <required>true</required>
+        </inputs>
+        <inputs>
+            <apiName>CRMData</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>CRMData</masterLabel>
+            <referenceName>Input:CRMData</referenceName>
+            <required>true</required>
+        </inputs>
+        <primaryModel>sfdc_ai__DefaultGPT4Omni</primaryModel>
+        <status>Published</status>
+    </templateVersions>
+    <templateVersions>
+        <content>You are an expert CRM Knowledge Graph constructor. Your objective is to meticulously analyze the provided CRM payload to identify direct business, operational, or influential relationships that involve the following referential entity:
+
+```
+{!$Input:TargetEntity}
+```
+
+Our extraction should focus on:
+1. Key named entities: **only** CRM Contacts (people) and Accounts (companies).  
+2. Relationships between those entities: Identify how Contacts and Accounts are connected through substantive business interactions.  
+3. Inferred relationships: Go beyond explicitly stated facts. Infer only highly likely relationships that imply a genuine business connection.
+
+Output Format:
+
+Provide the output as a JSON list of objects, where each object represents a relationship. Each object must include:
+
+* `entityName`: The name of the Person or Company which has a relationship to `{!$Input:TargetEntity}`
+* `canonicalName`: By default, this is the same value as `entityName`. If multiple relationships with the same entity exist, this value will have a single canonical representation of that entity name (which may have slight differences in the source text).
+* `entityType`: One of &quot;Person&quot; or &quot;Organization&quot; corresponding to `entityName`.
+* `predicate` – the relationship type (see prioritization below).  
+* `recordId` – the record ID of the Contact or Account.
+* `recordType – the type of the record in lowercase; e.g. &amp;quot;contact&amp;quot; or &amp;quot;account.
+* `citation` – a short quote from the payload that substantiates the relationship, or “Inferred from multiple statements regarding […]” if synthesized from several facts.
+* `context` – concise explanation of the relationship, citing specific cues.  
+
+Targeting Constraints:
+
+* For any unique relationship to `canonicalName` output **one** relationship, chosen by the following priority (highest → lowest):  
+ 1 Leadership roles (`is CEO of`, `is founder of`, `is chair of`)  
+ 2 Ownership / investment (`invested in`, `owns`, `acquired`)  
+ 3 Formal governance roles (`served on board of`)  
+ 4 Employment (`was employed by`)  
+ 5 Mentorship / influence (`was mentor to`)  
+ 6 Strategic or business partner (`was business partner of`)  
+ 7 Competitive relationship (`is competitor of`)
+
+General Constraints:
+
+* Relationships not involving the referential entity should be excluded.
+* Only named, real-world Contacts and Accounts; ignore products, abstract concepts, numerical data.  
+* Relationships must denote a direct business, operational, or influential connection.  
+* Resolve pronouns / variants to canonical entity names.  
+* Do **not** infer affiliation, role, or employment unless clearly stated or strongly implied as a substantive connection.  
+* Ignore topics outside CRM contacts/accounts scope.  
+* If no qualifying relationships are found, return `[]` (and nothing else).
+
+
+Example:
+If we are analyzing relationships of Jane Doe and have text that shows &quot;John Smith is a contact of Jane Doe&quot;
+infer: { &quot;entityName&quot;: &quot;John Smith&quot;, &quot;canonicalName&quot;: &quot;John Smith&quot;, &quot;entityType&quot;: &quot;Person&quot;, &quot;recordId&quot;: &quot;12345&quot;, &quot;recordType&quot;: &quot;contact&quot;, &quot;predicate&quot;: &quot;has contact&quot;, &quot;context&quot;: &quot;John Smith is a contact of Jane Doe, &quot;citation&quot;: &quot;John Smith was added as contact to Jane Doe&quot;}
+
+Text to Analyze (CRM payload):
+---
+{!$Input:CRMData}
+---
+
+</content>
+        <inputs>
+            <apiName>TargetEntity</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>TargetEntity</masterLabel>
+            <referenceName>Input:TargetEntity</referenceName>
+            <required>true</required>
+        </inputs>
+        <inputs>
+            <apiName>CRMData</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>CRMData</masterLabel>
+            <referenceName>Input:CRMData</referenceName>
+            <required>true</required>
+        </inputs>
+        <primaryModel>sfdc_ai__DefaultGPT4Omni</primaryModel>
+        <status>Published</status>
+    </templateVersions>
+    <type>einstein_gpt__flex</type>
+    <visibility>Global</visibility>
+</GenAiPromptTemplate>

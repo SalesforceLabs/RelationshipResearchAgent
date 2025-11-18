@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>62.0</apiVersion>
+    <isExposed>true</isExposed>
+    <targets>
+      <target>lightning__AppPage</target>
+      <target>lightning__RecordPage</target>
+      <target>lightning__HomePage</target>
+    </targets>
+    <targetConfigs>
+      <targetConfig targets="lightning__RecordPage">
+        <objects>
+          <object>Account</object>
+          <object>Lead</object>
+          <object>Opportunity</object>
+          <object>Contact</object>
+        </objects>
+        <property name="recordId" type="String" label="Record ID" description="The ID of the record being viewed." />
+        <property name="objectApiName" type="String" label="Object API Name" description="The API Name of the record being viewed." />
+      </targetConfig>
+    </targetConfigs>
+</LightningComponentBundle>

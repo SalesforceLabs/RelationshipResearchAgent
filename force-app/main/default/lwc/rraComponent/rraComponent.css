@@ -1,0 +1,62 @@
+/* Links */
+.link-line {
+  stroke: #555;
+  stroke-width: 2;
+}
+.link-crm {
+  /* intentionally empty for solid lines */
+}
+.link-default {
+  stroke-dasharray: 4 2;
+}
+
+/* Nodes */
+.node-shell {
+  fill: #ffffff;
+  stroke: #c9c9c9;
+  stroke-width: 2;
+}
+.node-shell--focus {
+  /* Using the following styling previously:
+     stroke: #0176d3;
+     stroke-width: 7; */
+}
+
+.node-inner {
+  /* Using the following styling previously:
+     stroke: #e5e5e5;
+     stroke-width: 1.5; */
+  fill: #969492;
+}
+.node-crm {
+  /* purposely left blank */
+}
+.node-contact,
+.node-lead {
+  fill: #9602c8;
+}
+.node-account,
+.node-opportunity {
+  fill: #5867e8;
+}
+
+.node-icon {
+  pointer-events: none;
+  fill: #ffffff;
+}
+
+/* CRM badge background disc */
+.node-badge-bg {
+  fill: #ffffff;
+  stroke: #d0d0d0;
+  stroke-width: 1;
+}
+
+/* Labels */
+.node-label {
+  fill: #2e2e2e; /* matches previous inline JS color */
+  font-size: 13px;
+  font-family: Calibri, Arial, sans-serif;
+  text-anchor: middle;
+  dominant-baseline: hanging;
+}

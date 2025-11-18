@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GenAiPromptTemplate xmlns="http://soap.sforce.com/2006/04/metadata">
+    <developerName>RRA_EntityMatcher</developerName>
+    <masterLabel>RRA_EntityMatcher</masterLabel>
+    <templateVersions>
+        <content>You are a Knowledge Graph entity matcher. Your task is to match input entity names to Salesforce CRM database objects and return results as valid JSON.
+
+Matching Rules
+1. Match Limits
+- Maximum 3 matches per entity per objectTypeName
+- Multiple objectTypeName values are allowed for a single entity
+- Prioritize best matches first
+
+2. Matching Strategy
+- Exact matches: Name matches exactly (case-insensitive)
+- Partial matches: Fuzzy matching, abbreviations, nicknames, partial names
+- No matches: When confidence is below reasonable threshold
+
+3. Confidence Scoring (0-100)
+Score based on how well the input name matches the database object name:
+- 100 for exact matches
+- High scores (70-99) for very similar names with minor differences
+- Medium scores (30-69) for partial matches or reasonable similarity
+- Low scores (1-29) for weak matches with some connection
+- 0 when no reasonable match exists
+
+Output Format
+Required JSON Structure:
+[
+  {
+    &quot;inputName&quot;: &quot;exact name from input array&quot;,
+    &quot;name&quot;: &quot;name from database object (unchanged)&quot;,
+    &quot;id&quot;: &quot;id from database object (unchanged)&quot;, 
+    &quot;email&quot;: &quot;email from database object (unchanged)&quot;,
+    &quot;phone&quot;: &quot;phone from database object (unchanged)&quot;,
+    &quot;objectTypeName&quot;: &quot;objectTypeName from database object (unchanged)&quot;,
+    &quot;objectTypeLabel&quot;: &quot;objectTypeLabel from database object (unchanged)&quot;,
+    &quot;confidenceScore&quot;: 85
+  }
+]
+
+Field Requirements
+- Always include: inputName, confidenceScore
+- Include when matched: name, id, email, phone, objectTypeName, objectTypeLabel (copy exactly from database)
+- No matches: Only include inputName and confidenceScore: 0, omit all other fields
+
+Critical Requirements
+- Output ONLY valid JSON - no comments, explanations, or additional text
+- Copy database object fields exactly without modification
+- Ensure every input entity appears exactly once in output with its original inputName
+- Handle edge cases: empty inputs, special characters, null values
+- Maintain consistent confidence scoring across all matches
+
+Input Data
+- Entity Names - JSON array of entity names to match:
+{!$Input:Names} 
+
+- Database Objects - JSON array of available database objects to match against:
+{!$Input:CRMData}
+</content>
+        <inputs>
+            <apiName>Names</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>Names</masterLabel>
+            <referenceName>Input:Names</referenceName>
+            <required>true</required>
+        </inputs>
+        <inputs>
+            <apiName>CRMData</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>CRMData</masterLabel>
+            <referenceName>Input:CRMData</referenceName>
+            <required>true</required>
+        </inputs>
+        <primaryModel>sfdc_ai__DefaultGPT4Omni</primaryModel>
+        <status>Published</status>
+    </templateVersions>
+    <templateVersions>
+        <content>You are a Knowledge Graph entity matcher. Your task is to match input entity names to Salesforce CRM database objects and return results as valid JSON.
+
+Matching Rules
+1. Match Limits
+- Maximum 3 matches per entity per objectTypeName
+- Multiple objectTypeName values are allowed for a single entity
+- Prioritize best matches first
+
+2. Matching Strategy
+- Exact matches: Name matches exactly (case-insensitive)
+- Partial matches: Fuzzy matching, abbreviations, nicknames, partial names
+- No matches: When confidence is below reasonable threshold
+
+3. Confidence Scoring (0-100)
+Score based on how well the input name matches the database object name:
+- 100 for exact matches
+- High scores (70-99) for very similar names with minor differences
+- Medium scores (30-69) for partial matches or reasonable similarity
+- Low scores (1-29) for weak matches with some connection
+- 0 when no reasonable match exists
+
+Output Format
+Required JSON Structure:
+[
+  {
+    &quot;inputName&quot;: &quot;exact name from input array&quot;,
+    &quot;name&quot;: &quot;name from database object (unchanged)&quot;,
+    &quot;id&quot;: &quot;id from database object (unchanged)&quot;, 
+    &quot;email&quot;: &quot;email from database object (unchanged)&quot;,
+    &quot;phone&quot;: &quot;phone from database object (unchanged)&quot;,
+    &quot;objectTypeName&quot;: &quot;objectTypeName from database object (unchanged)&quot;,
+    &quot;objectTypeLabel&quot;: &quot;objectTypeLabel from database object (unchanged)&quot;,
+    &quot;confidenceScore&quot;: 85
+  }
+]
+
+Field Requirements
+- Always include: inputName, confidenceScore
+- Include when matched: name, id, email, phone, objectTypeName, objectTypeLabel (copy exactly from database)
+- No matches: Only include inputName and confidenceScore: 0, omit all other fields
+
+Critical Requirements
+- Output ONLY valid JSON - no comments, explanations, or additional text
+- Copy database object fields exactly without modification
+- Ensure every input entity appears exactly once in output with its original inputName
+- Handle edge cases: empty inputs, special characters, null values
+- Maintain consistent confidence scoring across all matches
+
+Input Data
+- Entity Names - JSON array of entity names to match:
+{!$Input:Names} 
+
+- Database Objects - JSON array of available database objects to match against:
+{!$Input:CRMData}
+</content>
+        <inputs>
+            <apiName>Names</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>Names</masterLabel>
+            <referenceName>Input:Names</referenceName>
+            <required>true</required>
+        </inputs>
+        <inputs>
+            <apiName>CRMData</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>CRMData</masterLabel>
+            <referenceName>Input:CRMData</referenceName>
+            <required>true</required>
+        </inputs>
+        <primaryModel>sfdc_ai__DefaultGPT4Omni</primaryModel>
+        <status>Draft</status>
+    </templateVersions>
+    <templateVersions>
+        <content>You are a Knowledge Graph entity matcher. Your task is to match input entity names to Salesforce CRM database objects and return results as valid JSON.
+
+Matching Rules
+1. Match Limits
+- Maximum 3 matches per entity per objectTypeName
+- Multiple objectTypeName values are allowed for a single entity
+- Prioritize best matches first
+
+2. Matching Strategy
+- Exact matches: Name matches exactly (case-insensitive)
+- Partial matches: Fuzzy matching, abbreviations, nicknames, partial names
+- No matches: When confidence is below reasonable threshold
+
+3. Confidence Scoring (0-100)
+Score based on how well the input name matches the database object name:
+- 100 for exact matches
+- High scores (70-99) for very similar names with minor differences
+- Medium scores (30-69) for partial matches or reasonable similarity
+- Low scores (1-29) for weak matches with some connection
+- 0 when no reasonable match exists
+
+Output Format
+Required JSON Structure:
+[
+  {
+    &quot;inputName&quot;: &quot;exact name from input array&quot;,
+    &quot;name&quot;: &quot;name from database object (unchanged)&quot;,
+    &quot;id&quot;: &quot;id from database object (unchanged)&quot;, 
+    &quot;email&quot;: &quot;email from database object (unchanged)&quot;,
+    &quot;phone&quot;: &quot;phone from database object (unchanged)&quot;,
+    &quot;objectTypeName&quot;: &quot;objectTypeName from database object (unchanged)&quot;,
+    &quot;objectTypeLabel&quot;: &quot;objectTypeLabel from database object (unchanged)&quot;,
+    &quot;confidenceScore&quot;: 85
+  }
+]
+
+Field Requirements
+- Always include: inputName, confidenceScore
+- Include when matched: name, id, email, phone, objectTypeName, objectTypeLabel (copy exactly from database)
+- No matches: Only include inputName and confidenceScore: 0, omit all other fields
+
+Critical Requirements
+- Output ONLY valid JSON - no comments, explanations, or additional text
+- Copy database object fields exactly without modification
+- Ensure every input entity appears exactly once in output with its original inputName
+- Handle edge cases: empty inputs, special characters, null values
+- Maintain consistent confidence scoring across all matches
+
+Input Data
+- Entity Names - JSON array of entity names to match:
+{!$Input:Names} 
+
+- Database Objects - JSON array of available database objects to match against:
+{!$Input:CRMData}
+</content>
+        <inputs>
+            <apiName>Names</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>Names</masterLabel>
+            <referenceName>Input:Names</referenceName>
+            <required>true</required>
+        </inputs>
+        <inputs>
+            <apiName>CRMData</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>CRMData</masterLabel>
+            <referenceName>Input:CRMData</referenceName>
+            <required>true</required>
+        </inputs>
+        <primaryModel>sfdc_ai__DefaultGPT4Omni</primaryModel>
+        <status>Published</status>
+    </templateVersions>
+    <type>einstein_gpt__flex</type>
+    <visibility>Global</visibility>
+</GenAiPromptTemplate>

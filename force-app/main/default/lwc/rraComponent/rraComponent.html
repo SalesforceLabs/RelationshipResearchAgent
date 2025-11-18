@@ -1,0 +1,106 @@
+<template>
+  <lightning-card title="Relationship Insights" icon-name="utility:data_graph">
+    <template if:true={isLoading}>
+      <div class="slds-align_absolute-center slds-p-vertical_small">
+        <lightning-spinner alternative-text="Loading..." size="large"></lightning-spinner>
+      </div>
+    </template>
+
+    <div class="slds-align_absolute-center slds-var-m-bottom_large">
+      <svg class="d3" width={options.width} height={options.height} lwc:dom="manual"></svg>
+    </div>
+
+    <c-rra-create-record-modal
+      is-open={showCreateRecordModal}
+      node-data={selectedNodeData}
+      oncreate={handleCreateRecord}
+      onclose={handleCloseCreateRecordModal}
+    ></c-rra-create-record-modal>
+
+    <c-rra-confirm-match-modal
+      is-open={showConfirmMatchModal}
+      record-id={selectedNodeData.recordId}
+      object-api-name={objectApiName}
+      node-data={selectedNodeData}
+      onconfirm={handleConfirmMatch}
+      onclose={handleCloseConfirmModal}
+    ></c-rra-confirm-match-modal>
+
+    <template if:true={showDebug}>
+      <div class="slds-p-around_medium text-display-pane">
+        <lightning-button
+          label="Start New Research"
+          onclick={handleResearchButtonClick}
+          disabled={isLoading}
+          variant="brand-outline"
+          data-isnewresearch="1"
+          class="slds-m-around_medium"
+        ></lightning-button>
+
+        <lightning-button
+          label="Continue Research"
+          onclick={handleResearchButtonClick}
+          disabled={isLoading}
+          variant="brand-outline"
+          class="slds-m-around_medium"
+          data-isnewresearch="0"
+        ></lightning-button>
+
+        <div class="slds-m-top_medium">
+          <lightning-input
+            type="checkbox"
+            label="Async Execution"
+            checked={useAsyncExecution}
+            onchange={handleAsyncToggle}
+          ></lightning-input>
+          <lightning-input
+            type="checkbox"
+            label="Perform Deep Web Search"
+            checked={useDeepWebSearch}
+            onchange={handleDeepWebSearchToggle}
+          ></lightning-input>
+          <lightning-input
+            type="checkbox"
+            label="Use Record Context in Search"
+            checked={useRecordContext}
+            onchange={handleRecordContextToggle}
+          ></lightning-input>
+        </div>
+
+        <lightning-accordion
+          allow-multiple-sections-open="true"
+          active-section-name="relationshipData,diagnostics"
+          class="slds-m-top_medium"
+        >
+          <lightning-accordion-section name="relationshipData" label="Relationship Data">
+            <div slot="actions">
+              <lightning-button-icon
+                icon-name="utility:copy"
+                alternative-text="Copy relationship data"
+                onclick={handleCopyRelationshipData}
+              >
+              </lightning-button-icon>
+            </div>
+            <pre>
+              <code>{relationshipJson}</code>
+            </pre>
+          </lightning-accordion-section>
+
+          <lightning-accordion-section name="diagnostics" label="Diagnostics">
+            <div slot="actions">
+              <lightning-button-icon
+                icon-name="utility:copy"
+                alternative-text="Copy diagnostics data"
+                onclick={handleCopyDiagnosticsData}
+              >
+              </lightning-button-icon>
+            </div>
+            <pre>
+              <code>{diagnosticsJson}</code>
+            </pre>
+          </lightning-accordion-section>
+        </lightning-accordion>
+      </div>
+    </template>
+  </lightning-card>
+</template>

@@ -1,0 +1,446 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GenAiPromptTemplate xmlns="http://soap.sforce.com/2006/04/metadata">
+    <developerName>RRA_DeepWebResearch_Discovery</developerName>
+    <masterLabel>RRA_DeepWebResearch_Discovery</masterLabel>
+    <templateVersions>
+        <content>You are an expert Knowledge Graph constructor. Your objective is to meticulously analyze the provided text to identify direct business, operational, or influential relationships. You should particularly focus on relationships involving `{!$Input:SearchTarget}`.
+
+Our extraction should focus on:
+1. Key named entities: Focus only on People and legally-registered Companies. Reject generic or collective placeholders such as “multiple companies”, “various firms”, “several organizations”, etc. Exclude products, abstract concepts (e.g., &amp;quot;brand reputation&amp;quot;), and numeric data.
+2. Relationships between entities: Identify how People and Companies are connected through substantive business interactions.
+3. Inferred relationships: Go beyond explicitly stated facts. Infer relationships that are highly likely based on context, focusing on inferring relationships that imply a business connection.
+
+Output Format:
+
+Provide the output as a JSON list of objects, where each object represents a relationship. Each object must include:
+
+* `entityName`: The name of the Person or Company which has a relationship to `{!$Input:SearchTarget}`
+* `canonicalName`: By default, this is the same value as `entityName`. If multiple relationships with the same entity exist, this value will have a single canonical representation of that entity name (which may have slight differences in the source text).
+* `entityType`: One of &quot;Person&quot; or &quot;Organization&quot; corresponding to `entityName`.
+* `predicate`: The type of relationship (preferably from or adapted from the list above).
+* `citation`: A direct, short quote from the text that substantiates the identified relationship. If the relationship is inferred from multiple pieces of information, cite the most relevant part or briefly note &quot;Inferred from multiple statements regarding [topic]&quot;.
+* `citationURL`: If the citation is linked to specific URL, include that URL in this field. If present, it should be a valid HTTP URL. If the citation does not have a corresponding URL, leave this field empty.
+* `context`: Briefly and concisely explain the nature of the relationship using specific factual cues from the text. Avoid vague justifications unless a formal connection is described.
+
+Targeting Constraints:
+
+* The extracted entities should have a relationship with `{!$Input:SearchTarget}`.
+* If multiple valid relationships exist between the same pair of entities, select the most business-significant using the following prioritization (from highest to lowest):
+ 1. Leadership roles (e.g., is CEO of, is founder of, is chair of)
+ 2. Ownership or investment relationships (e.g., invested in, owns, acquired)
+ 3. Formal governance or board roles (e.g., served on board of)
+ 4. Employment relationships (e.g., was employed by)
+ 5. Mentorship or influence dynamics (e.g., was mentor to)
+ 6. Strategic or business partner (e.g., was business partner of)
+ 7. Competitive relationships (e.g., is competitor of)
+* If two relationships are tied in priority, prefer the one with the clearest and most directly stated context.
+
+General Constraints:
+
+* Only include relationships where `entityName` is a real-world individual Person or Organization.
+* Relationships MUST signify a direct business, operational, or influential connection.
+* Resolve pronouns or variations to their canonical entity names (e.g., &quot;he&quot; to &quot;Larry Ellison&quot;, &quot;Salesforce.com&quot; to &quot;Salesforce&quot;).
+* Ignore general topics, product names, locations, or numerical attributes.
+* Do not infer a person’s employer, affiliation, or job role unless it is explicitly stated or clearly implied as a substantive role or connection.
+* Exclude relationships where the primary interaction is a news organization, media outlet, or journalists reporting on, publishing, quoting, or featuring another entity. For example, do not extract `NewsOrgX, reported on, CompanyY` or `ReporterZ, wrote article about, PersonA`. However, if the *content* of a news report describes a valid relationship between two other entities (e.g., &quot;NewsOrgX reported that PersonA invested in CompanyY&quot;), then extract `PersonA, invested in, CompanyY`.
+* Don&apos;t generate Markdown or formatting of any kind.
+* If no relationships are identified, strictly output `[]` and NOTHING else.
+
+
+Example:
+
+If we are analyzing relationships of Jane Doe and have text that shows &quot;Jane Doe is the CEO of OrgX&quot;
+infer: { &quot;entityName&quot;: &quot;OrgX&quot;, &quot;canonicalName&quot;: &quot;OrgX&quot;, &quot;entityType&quot;: &quot;Organization&quot;, &quot;predicate&quot;: &quot;is CEO of&quot;, &quot;context&quot;: &quot;Jane Doe holds the Chief Executive Officer position at OrgX&quot;, &quot;citation&quot;: &quot;OrgX hires Jane Doe as new CEO&quot;, &quot;citationURL&quot;: &quot;http://cnn.com/news/orgx&quot; }
+
+Text to Analyze:
+---
+{!$EinsteinSearch:sfdc_ai__WebRetrievalAction.results}
+---
+</content>
+        <inputs>
+            <apiName>SearchTarget</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>SearchTarget</masterLabel>
+            <referenceName>Input:SearchTarget</referenceName>
+            <required>true</required>
+        </inputs>
+        <inputs>
+            <apiName>SearchTerms</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>SearchTerms</masterLabel>
+            <referenceName>Input:SearchTerms</referenceName>
+            <required>true</required>
+        </inputs>
+        <primaryModel>sfdc_ai__DefaultOpenAIGPT4OmniMini</primaryModel>
+        <status>Published</status>
+        <templateDataProviders>
+            <definition>invocable://getEinsteinRetrieverResults/sfdc_ai__WebRetrievalAction</definition>
+            <description>Web search retriever retrieves search results from the internet.</description>
+            <label>Web search retriever</label>
+            <parameters>
+                <definition>primitive://String</definition>
+                <isRequired>true</isRequired>
+                <parameterName>searchText</parameterName>
+                <valueExpression>{!$Input:SearchTerms}</valueExpression>
+            </parameters>
+            <referenceName>EinsteinSearch:sfdc_ai__WebRetrievalAction</referenceName>
+        </templateDataProviders>
+    </templateVersions>
+    <templateVersions>
+        <content>You are an expert Knowledge Graph constructor. Your objective is to meticulously analyze the provided text to identify direct business, operational, or influential relationships. You should particularly focus on relationships involving `{!$Input:SearchTarget}`.
+
+Our extraction should focus on:
+1. Key named entities: Focus only on People and legally-registered Companies. Reject generic or collective placeholders such as “multiple companies”, “various firms”, “several organizations”, etc. Exclude products, abstract concepts (e.g., &amp;quot;brand reputation&amp;quot;), and numeric data.
+2. Relationships between entities: Identify how People and Companies are connected through substantive business interactions.
+3. Inferred relationships: Go beyond explicitly stated facts. Infer relationships that are highly likely based on context, focusing on inferring relationships that imply a business connection.
+
+Output Format:
+
+Provide the output as a JSON list of objects, where each object represents a relationship. Each object must include:
+
+* `entityName`: The name of the Person or Company which has a relationship to `{!$Input:SearchTarget}`
+* `canonicalName`: By default, this is the same value as `entityName`. If multiple relationships with the same entity exist, this value will have a single canonical representation of that entity name (which may have slight differences in the source text).
+* `entityType`: One of &quot;Person&quot; or &quot;Organization&quot; corresponding to `entityName`.
+* `predicate`: The type of relationship (preferably from or adapted from the list above).
+* `citation`: A direct, short quote from the text that substantiates the identified relationship. If the relationship is inferred from multiple pieces of information, cite the most relevant part or briefly note &quot;Inferred from multiple statements regarding [topic]&quot;.
+* `citationURL`: If the citation is linked to specific URL, include that URL in this field. If present, it should be a valid HTTP URL. If the citation does not have a corresponding URL, leave this field empty.
+* `context`: Briefly and concisely explain the nature of the relationship using specific factual cues from the text. Avoid vague justifications unless a formal connection is described.
+
+Targeting Constraints:
+
+* The extracted entities should have a relationship with `{!$Input:SearchTarget}`.
+* If multiple valid relationships exist between the same pair of entities, select the most business-significant using the following prioritization (from highest to lowest):
+ 1. Leadership roles (e.g., is CEO of, is founder of, is chair of)
+ 2. Ownership or investment relationships (e.g., invested in, owns, acquired)
+ 3. Formal governance or board roles (e.g., served on board of)
+ 4. Employment relationships (e.g., was employed by)
+ 5. Mentorship or influence dynamics (e.g., was mentor to)
+ 6. Strategic or business partner (e.g., was business partner of)
+ 7. Competitive relationships (e.g., is competitor of)
+* If two relationships are tied in priority, prefer the one with the clearest and most directly stated context.
+
+General Constraints:
+
+* Only include relationships where `entityName` is a real-world individual Person or Organization.
+* Relationships MUST signify a direct business, operational, or influential connection.
+* Resolve pronouns or variations to their canonical entity names (e.g., &quot;he&quot; to &quot;Larry Ellison&quot;, &quot;Salesforce.com&quot; to &quot;Salesforce&quot;).
+* Ignore general topics, product names, locations, or numerical attributes.
+* Do not infer a person’s employer, affiliation, or job role unless it is explicitly stated or clearly implied as a substantive role or connection.
+* Exclude relationships where the primary interaction is a news organization, media outlet, or journalists reporting on, publishing, quoting, or featuring another entity. For example, do not extract `NewsOrgX, reported on, CompanyY` or `ReporterZ, wrote article about, PersonA`. However, if the *content* of a news report describes a valid relationship between two other entities (e.g., &quot;NewsOrgX reported that PersonA invested in CompanyY&quot;), then extract `PersonA, invested in, CompanyY`.
+* Don&apos;t generate Markdown or formatting of any kind.
+* If no relationships are identified, strictly output `[]` and NOTHING else.
+
+
+Example:
+
+If we are analyzing relationships of Jane Doe and have text that shows &quot;Jane Doe is the CEO of OrgX&quot;
+infer: { &quot;entityName&quot;: &quot;OrgX&quot;, &quot;canonicalName&quot;: &quot;OrgX&quot;, &quot;entityType&quot;: &quot;Organization&quot;, &quot;predicate&quot;: &quot;is CEO of&quot;, &quot;context&quot;: &quot;Jane Doe holds the Chief Executive Officer position at OrgX&quot;, &quot;citation&quot;: &quot;OrgX hires Jane Doe as new CEO&quot;, &quot;citationURL&quot;: &quot;http://cnn.com/news/orgx&quot; }
+
+Text to Analyze:
+---
+{!$EinsteinSearch:sfdc_ai__WebRetrievalAction.results}
+---
+</content>
+        <inputs>
+            <apiName>SearchTarget</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>SearchTarget</masterLabel>
+            <referenceName>Input:SearchTarget</referenceName>
+            <required>true</required>
+        </inputs>
+        <inputs>
+            <apiName>SearchTerms</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>SearchTerms</masterLabel>
+            <referenceName>Input:SearchTerms</referenceName>
+            <required>true</required>
+        </inputs>
+        <primaryModel>sfdc_ai__DefaultOpenAIGPT4OmniMini</primaryModel>
+        <status>Published</status>
+        <templateDataProviders>
+            <definition>invocable://getEinsteinRetrieverResults/sfdc_ai__WebRetrievalAction</definition>
+            <description>Web search retriever retrieves search results from the internet.</description>
+            <label>Web search retriever</label>
+            <parameters>
+                <definition>primitive://String</definition>
+                <isRequired>true</isRequired>
+                <parameterName>searchText</parameterName>
+                <valueExpression>{!$Input:SearchTerms}</valueExpression>
+            </parameters>
+            <referenceName>EinsteinSearch:sfdc_ai__WebRetrievalAction</referenceName>
+        </templateDataProviders>
+    </templateVersions>
+    <templateVersions>
+        <content>You are an expert Knowledge Graph constructor. Your objective is to meticulously analyze the provided text to identify direct business, operational, or influential relationships. You should particularly focus on relationships involving `{!$Input:SearchTarget}`.
+
+Our extraction should focus on:
+1. Key named entities: Focus only on People and legally-registered Companies. Reject generic or collective placeholders such as “multiple companies”, “various firms”, “several organizations”, etc. Exclude products, abstract concepts (e.g., &amp;quot;brand reputation&amp;quot;), and numeric data.
+2. Relationships between entities: Identify how People and Companies are connected through substantive business interactions.
+3. Inferred relationships: Go beyond explicitly stated facts. Infer relationships that are highly likely based on context, focusing on inferring relationships that imply a business connection.
+
+Output Format:
+
+Provide the output as a JSON list of objects, where each object represents a relationship. Each object must include:
+
+* `entityName`: The name of the Person or Company which has a relationship to `{!$Input:SearchTarget}`
+* `canonicalName`: By default, this is the same value as `entityName`. If multiple relationships with the same entity exist, this value will have a single canonical representation of that entity name (which may have slight differences in the source text).
+* `entityType`: One of &quot;Person&quot; or &quot;Organization&quot; corresponding to `entityName`.
+* `predicate`: The type of relationship (preferably from or adapted from the list above).
+* `citation`: A direct, short quote from the text that substantiates the identified relationship. If the relationship is inferred from multiple pieces of information, cite the most relevant part or briefly note &quot;Inferred from multiple statements regarding [topic]&quot;.
+* `citationURL`: If the citation is linked to specific URL, include that URL in this field. If present, it should be a valid HTTP URL. If the citation does not have a corresponding URL, leave this field empty.
+* `context`: Briefly and concisely explain the nature of the relationship using specific factual cues from the text. Avoid vague justifications unless a formal connection is described.
+
+Targeting Constraints:
+
+* The extracted entities should have a relationship with `{!$Input:SearchTarget}`.
+* If multiple valid relationships exist between the same pair of entities, select the most business-significant using the following prioritization (from highest to lowest):
+ 1. Leadership roles (e.g., is CEO of, is founder of, is chair of)
+ 2. Ownership or investment relationships (e.g., invested in, owns, acquired)
+ 3. Formal governance or board roles (e.g., served on board of)
+ 4. Employment relationships (e.g., was employed by)
+ 5. Mentorship or influence dynamics (e.g., was mentor to)
+ 6. Strategic or business partner (e.g., was business partner of)
+ 7. Competitive relationships (e.g., is competitor of)
+* If two relationships are tied in priority, prefer the one with the clearest and most directly stated context.
+
+General Constraints:
+
+* Only include relationships where `entityName` is a real-world individual Person or Organization.
+* Relationships MUST signify a direct business, operational, or influential connection.
+* Resolve pronouns or variations to their canonical entity names (e.g., &quot;he&quot; to &quot;Larry Ellison&quot;, &quot;Salesforce.com&quot; to &quot;Salesforce&quot;).
+* Ignore general topics, product names, locations, or numerical attributes.
+* Do not infer a person’s employer, affiliation, or job role unless it is explicitly stated or clearly implied as a substantive role or connection.
+* Exclude relationships where the primary interaction is a news organization, media outlet, or journalists reporting on, publishing, quoting, or featuring another entity. For example, do not extract `NewsOrgX, reported on, CompanyY` or `ReporterZ, wrote article about, PersonA`. However, if the *content* of a news report describes a valid relationship between two other entities (e.g., &quot;NewsOrgX reported that PersonA invested in CompanyY&quot;), then extract `PersonA, invested in, CompanyY`.
+* Don&apos;t generate Markdown or formatting of any kind.
+* If no relationships are identified, strictly output `[]` and NOTHING else.
+
+
+Example:
+
+If we are analyzing relationships of Jane Doe and have text that shows &quot;Jane Doe is the CEO of OrgX&quot;
+infer: { &quot;entityName&quot;: &quot;OrgX&quot;, &quot;canonicalName&quot;: &quot;OrgX&quot;, &quot;entityType&quot;: &quot;Organization&quot;, &quot;predicate&quot;: &quot;is CEO of&quot;, &quot;context&quot;: &quot;Jane Doe holds the Chief Executive Officer position at OrgX&quot;, &quot;citation&quot;: &quot;OrgX hires Jane Doe as new CEO&quot;, &quot;citationURL&quot;: &quot;http://cnn.com/news/orgx&quot; }
+
+Text to Analyze:
+---
+{!$EinsteinSearch:sfdc_ai__WebRetrievalAction.results}
+---
+</content>
+        <generationTemplateConfigs>
+            <generationConfigDeveloperName>einstein_gpt__enUsLanguageStyle</generationConfigDeveloperName>
+        </generationTemplateConfigs>
+        <inputs>
+            <apiName>SearchTarget</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>SearchTarget</masterLabel>
+            <referenceName>Input:SearchTarget</referenceName>
+            <required>true</required>
+        </inputs>
+        <inputs>
+            <apiName>SearchTerms</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>SearchTerms</masterLabel>
+            <referenceName>Input:SearchTerms</referenceName>
+            <required>true</required>
+        </inputs>
+        <primaryModel>sfdc_ai__DefaultOpenAIGPT4OmniMini</primaryModel>
+        <status>Published</status>
+        <templateDataProviders>
+            <definition>invocable://getEinsteinRetrieverResults/sfdc_ai__WebRetrievalAction</definition>
+            <description>Web search retriever retrieves search results from the internet.</description>
+            <label>Web search retriever</label>
+            <parameters>
+                <definition>primitive://String</definition>
+                <isRequired>true</isRequired>
+                <parameterName>searchText</parameterName>
+                <valueExpression>{!$Input:SearchTerms}</valueExpression>
+            </parameters>
+            <referenceName>EinsteinSearch:sfdc_ai__WebRetrievalAction</referenceName>
+        </templateDataProviders>
+    </templateVersions>
+    <templateVersions>
+        <content>You are an expert Knowledge Graph constructor. Your objective is to meticulously analyze the provided text to identify direct business, operational, or influential relationships. You should particularly focus on relationships involving `{!$Input:SearchTarget}`.
+
+Our extraction should focus on:
+1. Key named entities: Focus only on People and legally-registered Companies. Reject generic or collective placeholders such as “multiple companies”, “various firms”, “several organizations”, etc. Exclude products, abstract concepts (e.g., &amp;quot;brand reputation&amp;quot;), and numeric data.
+2. Relationships between entities: Identify how People and Companies are connected through substantive business interactions.
+3. Inferred relationships: Go beyond explicitly stated facts. Infer relationships that are highly likely based on context, focusing on inferring relationships that imply a business connection.
+
+Output Format:
+
+Provide the output as a JSON list of objects, where each object represents a relationship. Each object must include:
+
+* `entityName`: The name of the Person or Company which has a relationship to `{!$Input:SearchTarget}`
+* `canonicalName`: By default, this is the same value as `entityName`. If multiple relationships with the same entity exist, this value will have a single canonical representation of that entity name (which may have slight differences in the source text).
+* `entityType`: One of &quot;Person&quot; or &quot;Organization&quot; corresponding to `entityName`.
+* `predicate`: The type of relationship (preferably from or adapted from the list above).
+* `citation`: A direct, short quote from the text that substantiates the identified relationship. If the relationship is inferred from multiple pieces of information, cite the most relevant part or briefly note &quot;Inferred from multiple statements regarding [topic]&quot;.
+* `citationURL`: If the citation is linked to specific URL, include that URL in this field. If present, it should be a valid HTTP URL. If the citation does not have a corresponding URL, leave this field empty.
+* `context`: Briefly and concisely explain the nature of the relationship using specific factual cues from the text. Avoid vague justifications unless a formal connection is described.
+
+Targeting Constraints:
+
+* `{!$Input:SearchTarget}` MUST be one of the two entities in every relationship. Do NOT extract relationships between two other entities, even if they are associated with the SearchTarget.
+* If multiple valid relationships exist between the same pair of entities, select the most business-significant using the following prioritization (from highest to lowest):
+ 1. Leadership roles (e.g., is CEO of, is founder of, is chair of)
+ 2. Ownership or investment relationships (e.g., invested in, owns, acquired)
+ 3. Formal governance or board roles (e.g., served on board of)
+ 4. Employment relationships (e.g., was employed by)
+ 5. Mentorship or influence dynamics (e.g., was mentor to)
+ 6. Strategic or business partner (e.g., was business partner of)
+ 7. Competitive relationships (e.g., is competitor of)
+* If two relationships are tied in priority, prefer the one with the clearest and most directly stated context.
+
+General Constraints:
+
+* Only include relationships where `entityName` is a real-world individual Person or Organization.
+* Relationships MUST signify a direct business, operational, or influential connection.
+* Ignore general topics, product names, locations, or numerical attributes.
+* Delete all legal entity suffixes, including but not limited to: &quot;Inc&quot;, &quot;LLC&quot;, &quot;Corp&quot;, &quot;Ltd&quot;, &quot;S.A.&quot;, &quot;Pte&quot;, &quot;GmbH&quot;. Do not remove them if they are part of the core brand name (e.g., &quot;Microsoft Corp.&quot;).
+* Delete non-essential articles and prepositions from entity names, specifically: &quot;The&quot;, &quot;A&quot;, &quot;An&quot;.
+* Delete all generic top-level domains (TLDs) like &quot;.com&quot;, &quot;.net&quot;, &quot;.org&quot;, &quot;.co&quot;.
+* Ensure only single spaces remain between words.
+* Return the final name in Title Case or Proper Case (e.g., &quot;Apple Computers&quot;).
+* Do not infer a person’s employer, affiliation, or job role unless it is explicitly stated or clearly implied as a substantive role or connection.
+* Exclude relationships where the primary interaction is a news organization, media outlet, or journalists reporting on, publishing, quoting, or featuring another entity. For example, do not extract `NewsOrgX, reported on, CompanyY` or `ReporterZ, wrote article about, PersonA`. However, if the *content* of a news report describes a valid relationship between two other entities (e.g., &quot;NewsOrgX reported that PersonA invested in CompanyY&quot;), then extract `PersonA, invested in, CompanyY`.
+* Do not include self-referential relationships. For example, a relationship like &quot;OrganizationX invested in OrganizationX&quot; is not valid. Entity pairs in a relationship should be distinct.
+* Don&apos;t generate Markdown or formatting of any kind.
+* If no relationships are identified, strictly output `[]` and NOTHING else.
+
+
+Example:
+
+If we are analyzing relationships of Jane Doe and have text that shows &quot;Jane Doe is the CEO of OrgX&quot;
+infer: { &quot;entityName&quot;: &quot;OrgX&quot;, &quot;canonicalName&quot;: &quot;OrgX&quot;, &quot;entityType&quot;: &quot;Organization&quot;, &quot;predicate&quot;: &quot;is CEO of&quot;, &quot;context&quot;: &quot;Jane Doe holds the Chief Executive Officer position at OrgX&quot;, &quot;citation&quot;: &quot;OrgX hires Jane Doe as new CEO&quot;, &quot;citationURL&quot;: &quot;http://cnn.com/news/orgx&quot; }
+
+Text to Analyze:
+---
+{!$EinsteinSearch:sfdc_ai__WebRetrievalAction.results}
+---
+</content>
+        <generationTemplateConfigs>
+            <generationConfigDeveloperName>einstein_gpt__enUsLanguageStyle</generationConfigDeveloperName>
+        </generationTemplateConfigs>
+        <inputs>
+            <apiName>SearchTarget</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>SearchTarget</masterLabel>
+            <referenceName>Input:SearchTarget</referenceName>
+            <required>true</required>
+        </inputs>
+        <inputs>
+            <apiName>SearchTerms</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>SearchTerms</masterLabel>
+            <referenceName>Input:SearchTerms</referenceName>
+            <required>true</required>
+        </inputs>
+        <primaryModel>sfdc_ai__DefaultOpenAIGPT4OmniMini</primaryModel>
+        <status>Published</status>
+        <templateDataProviders>
+            <definition>invocable://getEinsteinRetrieverResults/sfdc_ai__WebRetrievalAction</definition>
+            <description>Web search retriever retrieves search results from the internet.</description>
+            <label>Web search retriever</label>
+            <parameters>
+                <definition>primitive://String</definition>
+                <isRequired>true</isRequired>
+                <parameterName>searchText</parameterName>
+                <valueExpression>{!$Input:SearchTerms}</valueExpression>
+            </parameters>
+            <referenceName>EinsteinSearch:sfdc_ai__WebRetrievalAction</referenceName>
+        </templateDataProviders>
+    </templateVersions>
+    <templateVersions>
+        <content>You are an expert Knowledge Graph constructor. Your objective is to meticulously analyze the provided text to identify direct business, operational, or influential relationships. You should particularly focus on relationships involving `{!$Input:SearchTarget}`.
+
+Our extraction should focus on:
+1. Key named entities: Focus only on People and legally-registered Companies. Reject generic or collective placeholders such as “multiple companies”, “various firms”, “several organizations”, etc. Exclude products, abstract concepts (e.g., &amp;quot;brand reputation&amp;quot;), and numeric data.
+2. Relationships between entities: Identify how People and Companies are connected through substantive business interactions.
+3. Inferred relationships: Go beyond explicitly stated facts. Infer relationships that are highly likely based on context, focusing on inferring relationships that imply a business connection.
+
+Output Format:
+
+Provide the output as a JSON list of objects, where each object represents a relationship. Each object must include:
+
+* `entityName`: The name of the Person or Company which has a relationship to `{!$Input:SearchTarget}`
+* `canonicalName`: By default, this is the same value as `entityName`. If multiple relationships with the same entity exist, this value will have a single canonical representation of that entity name (which may have slight differences in the source text).
+* `entityType`: One of &quot;Person&quot; or &quot;Organization&quot; corresponding to `entityName`.
+* `predicate`: The type of relationship (preferably from or adapted from the list above).
+* `citation`: A direct, short quote from the text that substantiates the identified relationship. If the relationship is inferred from multiple pieces of information, cite the most relevant part or briefly note &quot;Inferred from multiple statements regarding [topic]&quot;.
+* `citationURL`: If the citation is linked to specific URL, include that URL in this field. If present, it should be a valid HTTP URL. If the citation does not have a corresponding URL, leave this field empty.
+* `context`: Briefly and concisely explain the nature of the relationship using specific factual cues from the text. Avoid vague justifications unless a formal connection is described.
+
+Targeting Constraints:
+
+* `{!$Input:SearchTarget}` MUST be one of the two entities in every relationship. Do NOT extract relationships between two other entities, even if they are associated with the SearchTarget.
+* If multiple valid relationships exist between the same pair of entities, select the most business-significant using the following prioritization (from highest to lowest):
+ 1. Leadership roles (e.g., is CEO of, is founder of, is chair of)
+ 2. Ownership or investment relationships (e.g., invested in, owns, acquired)
+ 3. Formal governance or board roles (e.g., served on board of)
+ 4. Employment relationships (e.g., was employed by)
+ 5. Mentorship or influence dynamics (e.g., was mentor to)
+ 6. Strategic or business partner (e.g., was business partner of)
+ 7. Competitive relationships (e.g., is competitor of)
+* If two relationships are tied in priority, prefer the one with the clearest and most directly stated context.
+
+General Constraints:
+
+* Only include relationships where `entityName` is a real-world individual Person or Organization.
+* Relationships MUST signify a direct business, operational, or influential connection.
+* Ignore general topics, product names, locations, or numerical attributes.
+* Delete all legal entity suffixes, including but not limited to: &quot;Inc&quot;, &quot;LLC&quot;, &quot;Corp&quot;, &quot;Ltd&quot;, &quot;S.A.&quot;, &quot;Pte&quot;, &quot;GmbH&quot;. Do not remove them if they are part of the core brand name (e.g., &quot;Microsoft Corp.&quot;).
+* Delete non-essential articles and prepositions from entity names, specifically: &quot;The&quot;, &quot;A&quot;, &quot;An&quot;.
+* Delete all generic top-level domains (TLDs) like &quot;.com&quot;, &quot;.net&quot;, &quot;.org&quot;, &quot;.co&quot;.
+* Ensure only single spaces remain between words.
+* Return the final name in Title Case or Proper Case (e.g., &quot;Apple Computers&quot;).
+* Do not infer a person’s employer, affiliation, or job role unless it is explicitly stated or clearly implied as a substantive role or connection.
+* Exclude relationships where the primary interaction is a news organization, media outlet, or journalists reporting on, publishing, quoting, or featuring another entity. For example, do not extract `NewsOrgX, reported on, CompanyY` or `ReporterZ, wrote article about, PersonA`. However, if the *content* of a news report describes a valid relationship between two other entities (e.g., &quot;NewsOrgX reported that PersonA invested in CompanyY&quot;), then extract `PersonA, invested in, CompanyY`.
+* Do not include self-referential relationships. For example, a relationship like &quot;OrganizationX invested in OrganizationX&quot; is not valid. Entity pairs in a relationship should be distinct.
+* Don&apos;t generate Markdown or formatting of any kind.
+* If no relationships are identified, strictly output `[]` and NOTHING else.
+
+
+Example:
+
+If we are analyzing relationships of Jane Doe and have text that shows &quot;Jane Doe is the CEO of OrgX&quot;
+infer: { &quot;entityName&quot;: &quot;OrgX&quot;, &quot;canonicalName&quot;: &quot;OrgX&quot;, &quot;entityType&quot;: &quot;Organization&quot;, &quot;predicate&quot;: &quot;is CEO of&quot;, &quot;context&quot;: &quot;Jane Doe holds the Chief Executive Officer position at OrgX&quot;, &quot;citation&quot;: &quot;OrgX hires Jane Doe as new CEO&quot;, &quot;citationURL&quot;: &quot;http://cnn.com/news/orgx&quot; }
+
+Text to Analyze:
+---
+{!$EinsteinSearch:sfdc_ai__WebRetrievalAction.results}
+---
+</content>
+        <generationTemplateConfigs>
+            <generationConfigDeveloperName>einstein_gpt__enUsLanguageStyle</generationConfigDeveloperName>
+        </generationTemplateConfigs>
+        <inputs>
+            <apiName>SearchTarget</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>SearchTarget</masterLabel>
+            <referenceName>Input:SearchTarget</referenceName>
+            <required>true</required>
+        </inputs>
+        <inputs>
+            <apiName>SearchTerms</apiName>
+            <definition>primitive://String</definition>
+            <masterLabel>SearchTerms</masterLabel>
+            <referenceName>Input:SearchTerms</referenceName>
+            <required>true</required>
+        </inputs>
+        <primaryModel>sfdc_ai__DefaultOpenAIGPT4OmniMini</primaryModel>
+        <status>Published</status>
+        <templateDataProviders>
+            <definition>invocable://getEinsteinRetrieverResults/sfdc_ai__WebRetrievalAction</definition>
+            <description>Web search retriever retrieves search results from the internet.</description>
+            <label>Web search retriever</label>
+            <parameters>
+                <definition>primitive://String</definition>
+                <isRequired>true</isRequired>
+                <parameterName>searchText</parameterName>
+                <valueExpression>{!$Input:SearchTerms}</valueExpression>
+            </parameters>
+            <referenceName>EinsteinSearch:sfdc_ai__WebRetrievalAction</referenceName>
+        </templateDataProviders>
+    </templateVersions>
+    <type>einstein_gpt__flex</type>
+    <visibility>Global</visibility>
+</GenAiPromptTemplate>
