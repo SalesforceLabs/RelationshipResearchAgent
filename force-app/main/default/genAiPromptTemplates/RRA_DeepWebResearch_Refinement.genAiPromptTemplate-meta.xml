@@ -476,7 +476,16 @@ Return JSON array with this exact structure:
 - **Strategic value:** Each relationship must provide distinct business intelligence value
 
 **Final Check:**
-Before returning results, verify each relationship adds distinct business intelligence value and passes the &quot;would an executive care about this?&quot; test. @
+Before returning results, verify each relationship adds distinct business intelligence value and passes the &quot;would an executive care about this?&quot; test.
+
+**CRITICAL OUTPUT REQUIREMENT:**
+Your response MUST contain ONLY the JSON array. Do not include:
+- Explanatory text before or after the JSON
+- Conversational phrases like &quot;I will&quot;, &quot;Here is&quot;, &quot;Based on&quot;
+- Comments or markdown formatting
+- Any text outside the JSON structure
+
+Return the JSON array immediately without preamble. @
 </content>
         <generationTemplateConfigs>
             <generationConfigDeveloperName>einstein_gpt__enUsLanguageStyle</generationConfigDeveloperName>
@@ -643,7 +652,16 @@ Return JSON array with this exact structure:
 - **Strategic value:** Each relationship must provide distinct business intelligence value
 
 **Final Check:**
-Before returning results, verify each relationship adds distinct business intelligence value and passes the &quot;would an executive care about this?&quot; test. @
+Before returning results, verify each relationship adds distinct business intelligence value and passes the &quot;would an executive care about this?&quot; test.
+
+**CRITICAL OUTPUT REQUIREMENT:**
+Your response MUST contain ONLY the JSON array. Do not include:
+- Explanatory text before or after the JSON
+- Conversational phrases like &quot;I will&quot;, &quot;Here is&quot;, &quot;Based on&quot;
+- Comments or markdown formatting
+- Any text outside the JSON structure
+
+Return the JSON array immediately without preamble. @
 </content>
         <generationTemplateConfigs>
             <generationConfigDeveloperName>einstein_gpt__enUsLanguageStyle</generationConfigDeveloperName>
@@ -810,7 +828,16 @@ Return JSON array with this exact structure:
 - **Strategic value:** Each relationship must provide distinct business intelligence value
 
 **Final Check:**
-Before returning results, verify each relationship adds distinct business intelligence value and passes the &quot;would an executive care about this?&quot; test. @
+Before returning results, verify each relationship adds distinct business intelligence value and passes the &quot;would an executive care about this?&quot; test.
+
+**CRITICAL OUTPUT REQUIREMENT:**
+Your response MUST contain ONLY the JSON array. Do not include:
+- Explanatory text before or after the JSON
+- Conversational phrases like &quot;I will&quot;, &quot;Here is&quot;, &quot;Based on&quot;
+- Comments or markdown formatting
+- Any text outside the JSON structure
+
+Return the JSON array immediately without preamble. @
 </content>
         <generationTemplateConfigs>
             <generationConfigDeveloperName>einstein_gpt__enUsLanguageStyle</generationConfigDeveloperName>
