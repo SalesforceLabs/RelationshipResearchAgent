@@ -71,6 +71,84 @@ public with sharing class EinsteinPromptResponse {
       return body.trim();
     }
 
+    // This handles cases where LLM adds conversational text before/after JSON
+    String extracted = extractFirstJsonFromText(body);
+    if (String.isNotBlank(extracted) && isLikelyJson(extracted)) {
+      System.debug('Warning: Extracted JSON from conversational response. Prompt may need adjustment.');
+      return extracted;
+    }
+
+    return null;
+  }
+
+  // Extract first JSON array or object from text, handling nested structures
+  // Prioritizes arrays since most LLM responses return JSON arrays
+  private static String extractFirstJsonFromText(String text) {
+    if (String.isBlank(text)) {
+      return null;
+    }
+
+    // Try to find first JSON array (most common case for our use)
+    Integer arrayStart = text.indexOf('[');
+    if (arrayStart >= 0) {
+      String extracted = extractBalancedJson(text, arrayStart, '[', ']');
+      if (String.isNotBlank(extracted)) {
+        return extracted;
+      }
+    }
+
+    // Fallback: Try to find first JSON object
+    Integer objectStart = text.indexOf('{');
+    if (objectStart >= 0) {
+      String extracted = extractBalancedJson(text, objectStart, '{', '}');
+      if (String.isNotBlank(extracted)) {
+        return extracted;
+      }
+    }
+
+    return null;
+  }
+
+  // Extract balanced JSON structure starting from a given index
+  private static String extractBalancedJson(String text, Integer startIndex, String openChar, String closeChar) {
+    if (startIndex < 0 || startIndex >= text.length()) {
+      return null;
+    }
+
+    Integer depth = 0;
+    Integer jsonStart = startIndex;
+    Boolean inString = false;
+    Boolean escaped = false;
+
+    for (Integer i = startIndex; i < text.length(); i++) {
+      String currentChar = text.substring(i, i + 1);
+
+      // Handle string boundaries and escaping
+      if (currentChar == '\\' && !escaped) {
+        escaped = true;
+        continue;
+      }
+
+      if (currentChar == '"' && !escaped) {
+        inString = !inString;
+      }
+
+      escaped = false;
+
+      // Only count brackets outside of strings
+      if (!inString) {
+        if (currentChar == openChar) {
+          depth++;
+        } else if (currentChar == closeChar) {
+          depth--;
+          if (depth == 0) {
+            // Found matching closing bracket
+            return text.substring(jsonStart, i + 1);
+          }
+        }
+      }
+    }
+
     return null;
   }
 
@@ -139,8 +217,13 @@ public with sharing class EinsteinPromptResponse {
 
   public Object getJson(Type apexType) {
     if (!parsedJsonCache.containsKey(apexType)) {
-      Object parsed = parseJson(getText(), apexType);
-      parsedJsonCache.put(apexType, parsed);
+      String text = getText();
+      if (String.isBlank(text)) {
+        parsedJsonCache.put(apexType, null);
+      } else {
+        Object parsed = parseJson(text, apexType);
+        parsedJsonCache.put(apexType, parsed);
+      }
     }
 
     return parsedJsonCache.get(apexType);
