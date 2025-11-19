@@ -177,6 +177,8 @@ public with sharing class EinsteinPromptResponse {
         return JSON.deserialize(jsonText, apexType);
       }
     } catch (Exception e) {
+      System.debug('--- JSON PARSE EXCEPTION ---');
+      System.debug(jsonText);
       System.debug(System.LoggingLevel.ERROR, 'Failed to parse JSON: ' + e.getMessage());
       return null;
     }
