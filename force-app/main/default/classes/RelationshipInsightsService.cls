@@ -46,8 +46,10 @@ public with sharing class RelationshipInsightsService {
     if (useDeepWebSearch) {
       System.debug('Using Deep Web Research Engine for entity: ' + targetEntity.getName());
       String deepWebResults = DeepWebResearchEngine.run(targetEntity, recordContextSearchTerms);
+      // use our routines to unfence JSON into objects.
+      List<Object> deepWebData = (List<Object>) EinsteinPromptResponse.parseJson(deepWebResults);
       rels = RelationshipInsightsEnvelope.fromObjectList(
-        (List<Object>) JSON.deserializeUntyped(deepWebResults),
+        deepWebData,
         RelationshipInsightsEnvelope.SOURCE_WEB
       );
       System.debug('Related entities from deep web research:');
@@ -90,8 +92,10 @@ public with sharing class RelationshipInsightsService {
     String excludeId = targetEntity.getId();
     CrmRelationshipInsightsPayloadAssembler asm = new CrmRelationshipInsightsPayloadAssembler();
     asm.addEntity(targetEntity);
-    for (EntityMatcher.EntityInfoMatch entityMatch : rawMatches) {
-      asm.addEntity(entityMatch.info);
+    if (rawMatches != null) {
+      for (EntityMatcher.EntityInfoMatch entityMatch : rawMatches) {
+        asm.addEntity(entityMatch.info);
+      }
     }
     // this adds CRM data from detected database Ids.
     asm.build();
