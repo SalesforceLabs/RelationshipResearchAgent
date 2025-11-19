@@ -23,7 +23,7 @@ public with sharing class RelationshipInsightsEnvelope {
   public static final String SOURCE_WEB = 'web';
   public static final String SOURCE_CRM = 'crm';
 
-  public static RelatedEntity relatedFromObject(Object item, String source) {
+  public static RelatedEntity relatedFromObject(Object item, String defaultSource) {
     if (!(item instanceof Map<String, Object>)) {
       return null;
     }
@@ -46,7 +46,10 @@ public with sharing class RelationshipInsightsEnvelope {
     r.recordId = (rid == null) ? null : String.valueOf(rid);
     r.recordType = (String) m.get('recordType');
     r.isCrmConfirmed = (Boolean) m.get('isCrmConfirmed');
-    r.source = source;
+
+    // For single-source extraction: defaultSource overrides JSON
+    // For multi-source extraction: pass null to preserve source from JSON
+    r.source = (defaultSource != null) ? defaultSource : (String) m.get('source');
 
     return r.isValid() ? r : null;
   }
@@ -60,7 +63,7 @@ public with sharing class RelationshipInsightsEnvelope {
 
   // Factory method to parse a list of generic objects into RelatedEntity
   // instances.
-  public static List<RelatedEntity> fromObjectList(List<Object> items, String source) {
+  public static List<RelatedEntity> fromObjectList(List<Object> items, String defaultSource) {
     if (items == null || items.isEmpty()) {
       return new List<RelatedEntity>();
     }
@@ -69,7 +72,7 @@ public with sharing class RelationshipInsightsEnvelope {
 
     for (Object item : items) {
       try {
-        RelatedEntity rel = relatedFromObject(item, source);
+        RelatedEntity rel = relatedFromObject(item, defaultSource);
         if (rel != null) {
           result.add(rel);
         }

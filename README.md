@@ -127,6 +127,7 @@ Before installing RRA, ensure your Salesforce org has:
    - `RRA_AppendRelationships`
    - `RRA_DeepWebResearch_Discovery`
    - `RRA_DeepWebResearch_Refinement`
+   - `RRA_ConsolidateCrossSourceInsights`
 
    **Known Issue:** Templates may deploy as inactive. Manually activate if needed, and ensure output mode is set to **JSON**.
 
