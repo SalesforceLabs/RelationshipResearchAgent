@@ -100,10 +100,9 @@ public with sharing class DeepWebResearchEngine {
     Set<String> allEntities = new Set<String>();
     Integer searchCount = 0;
 
-    diag.get('DeepWebResearch').get('Stage1').put('searchTarget', context.targetEntity);
-    diag.get('DeepWebResearch')
-      .get('Stage1')
-      .put('recordContext', context.recordContextSearchTerms);
+    RRADiagnostics.DiagnosticEntry stage1Diag = diag.get('DeepWebResearch').get('Stage1');
+    stage1Diag.put('searchTarget', context.targetEntity);
+    stage1Diag.put('recordContext', context.recordContextSearchTerms);
 
     Integer searchIndex = 1;
     for (String discoverySearchTerm : discoverySearchTerms) {
@@ -115,14 +114,9 @@ public with sharing class DeepWebResearchEngine {
       stageContext.putAll(searchInputs);
 
       String searchKey = 'DiscoverySearch' + searchIndex;
-      diag.get('DeepWebResearch')
-        .get('Stage1')
-        .get(searchKey)
-        .put('searchTopic', DISCOVERY_SEARCH_TOPICS[searchIndex - 1]);
-      diag.get('DeepWebResearch')
-        .get('Stage1')
-        .get(searchKey)
-        .put('searchTerms', discoverySearchTerm);
+      RRADiagnostics.DiagnosticEntry searchDiag = stage1Diag.get(searchKey);
+      searchDiag.put('searchTopic', DISCOVERY_SEARCH_TOPICS[searchIndex - 1]);
+      searchDiag.put('searchTerms', discoverySearchTerm);
 
       EinsteinPromptResponse response = EinsteinPromptService.prompt(
         stage.promptTemplate,
@@ -138,7 +132,7 @@ public with sharing class DeepWebResearchEngine {
 
         if (entityList != null && !entityList.isEmpty()) {
           allResults.add(searchResult);
-          diag.get('DeepWebResearch').get('Stage1').get(searchKey).put('searchResults', entityList);
+          searchDiag.put('searchResults', entityList);
 
           // Extract entity names directly from parsed data
           Integer entityCount = 0;
@@ -188,8 +182,9 @@ public with sharing class DeepWebResearchEngine {
     Set<String> allEntities = new Set<String>();
     Integer searchCount = 0;
 
-    diag.get('DeepWebResearch').get('Stage2').put('searchTarget', context.targetEntity);
-    diag.get('DeepWebResearch').get('Stage2').put('topEntities', topEntities);
+    RRADiagnostics.DiagnosticEntry stage2Diag = diag.get('DeepWebResearch').get('Stage2');
+    stage2Diag.put('searchTarget', context.targetEntity);
+    stage2Diag.put('topEntities', topEntities);
 
     Integer searchIndex = 1;
     for (String searchTerm : searchTerms) {
@@ -201,7 +196,8 @@ public with sharing class DeepWebResearchEngine {
       stageContext.putAll(searchInputs);
 
       String searchKey = 'RelationshipSearch' + searchIndex;
-      diag.get('DeepWebResearch').get('Stage2').get(searchKey).put('searchTerms', searchTerm);
+      RRADiagnostics.DiagnosticEntry searchDiag = stage2Diag.get(searchKey);
+      searchDiag.put('searchTerms', searchTerm);
 
       EinsteinPromptResponse response = EinsteinPromptService.prompt(
         stage.promptTemplate,
@@ -215,7 +211,7 @@ public with sharing class DeepWebResearchEngine {
 
         if (entityList != null && !entityList.isEmpty()) {
           allResults.add(searchResult);
-          diag.get('DeepWebResearch').get('Stage2').get(searchKey).put('searchResults', entityList);
+          searchDiag.put('searchResults', entityList);
 
           // Extract entity names directly from parsed data
           Integer entityCount = 0;
@@ -263,13 +259,10 @@ public with sharing class DeepWebResearchEngine {
         ' characters of relationship data'
     );
 
-    diag.get('DeepWebResearch').get('Stage3').put('searchTarget', context.targetEntity);
-    diag.get('DeepWebResearch')
-      .get('Stage3')
-      .put('recordContext', context.recordContextSearchTerms);
-    diag.get('DeepWebResearch')
-      .get('Stage3')
-      .put('inputRelationships', JSON.deserializeUntyped(aggregatedRelationships));
+    RRADiagnostics.DiagnosticEntry stage3Diag = diag.get('DeepWebResearch').get('Stage3');
+    stage3Diag.put('searchTarget', context.targetEntity);
+    stage3Diag.put('recordContext', context.recordContextSearchTerms);
+    stage3Diag.put('inputRelationships', JSON.deserializeUntyped(aggregatedRelationships));
 
     // Prepare input for refinement template
     Map<String, Object> refinementInputs = new Map<String, Object>();
@@ -295,11 +288,11 @@ public with sharing class DeepWebResearchEngine {
       } catch (Exception e) {
         System.debug('Stage 3: Failed to parse JSON - ' + e.getMessage());
       }
-      diag.get('DeepWebResearch').get('Stage3').put('refinedResults', refinedResultDeserialized);
+      stage3Diag.put('refinedResults', refinedResultDeserialized);
       System.debug('Stage 3: Successfully refined relationships');
     } else {
       stage.stageOutput = '[]';
-      diag.get('DeepWebResearch').get('Stage3').put('refinedResults', new List<Object>());
+      stage3Diag.put('refinedResults', new List<Object>());
       System.debug('Stage 3: No valid relationships after refinement');
     }
 

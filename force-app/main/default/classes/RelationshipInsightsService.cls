@@ -215,7 +215,8 @@ public with sharing class RelationshipInsightsService {
     String crmJson = JSON.serialize(crmInsights);
     String webJson = JSON.serialize(webInsights);
 
-    RRADiagnostics.DiagnosticEntry diag = RRADiagnostics.getInstance().get('CrossSourceConsolidation');
+    RRADiagnostics.DiagnosticEntry diag = RRADiagnostics.getInstance()
+      .get('CrossSourceConsolidation');
     diag.put('crmInsightsCount', crmInsights.size());
     diag.put('webInsightsCount', webInsights.size());
     diag.put('crmInsights', JSON.deserializeUntyped(crmJson));
