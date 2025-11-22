@@ -9,3 +9,10 @@
 .vscode
 
 coverage/
+
+# Documentation and legal files
+CODE_OF_CONDUCT.md
+CONTRIBUTING.md
+SECURITY.md
+how_to_license.md
+LICENSE.txt
