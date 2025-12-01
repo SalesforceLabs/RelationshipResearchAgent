@@ -10,8 +10,6 @@ public with sharing class RelationshipInsightsService {
     Boolean isNewResearch,
     RRARelationships__c rraRecord
   ) {
-    List<RelationshipInsightsEnvelope.RelatedEntity> related = new List<RelationshipInsightsEnvelope.RelatedEntity>();
-
     List<RelationshipInsightsEnvelope.RelatedEntity> webInsights = getWebInsights(
       targetEntity,
       useDeepWebSearch,
@@ -22,9 +20,15 @@ public with sharing class RelationshipInsightsService {
       webInsights = appendWebInsights(targetEntity, webInsights, rraRecord);
     }
 
-    related.addAll(webInsights);
-    related.addAll(getCrmInsights(targetEntity));
-    return RelationshipInsightsEnvelope.fromCrmAnchor(targetEntity, related);
+    List<RelationshipInsightsEnvelope.RelatedEntity> crmInsights = getCrmInsights(targetEntity);
+
+    // Consolidate web and CRM insights to eliminate duplicates and enrich relationships
+    List<RelationshipInsightsEnvelope.RelatedEntity> consolidated = consolidateCrossSourceInsights(
+      crmInsights,
+      webInsights
+    );
+
+    return RelationshipInsightsEnvelope.fromCrmAnchor(targetEntity, consolidated);
   }
 
   // additional web search terms to produce more relevant results (for simple search only)
@@ -187,5 +191,54 @@ public with sharing class RelationshipInsightsService {
     System.debug('Append web relationships: ' + JSON.serialize(webInsights));
 
     return webInsights;
+  }
+
+  private static List<RelationshipInsightsEnvelope.RelatedEntity> consolidateCrossSourceInsights(
+    List<RelationshipInsightsEnvelope.RelatedEntity> crmInsights,
+    List<RelationshipInsightsEnvelope.RelatedEntity> webInsights
+  ) {
+    if (
+      (crmInsights == null || crmInsights.isEmpty()) &&
+      (webInsights == null || webInsights.isEmpty())
+    ) {
+      return new List<RelationshipInsightsEnvelope.RelatedEntity>();
+    }
+
+    if (crmInsights == null || crmInsights.isEmpty()) {
+      return webInsights;
+    }
+
+    if (webInsights == null || webInsights.isEmpty()) {
+      return crmInsights;
+    }
+
+    String crmJson = JSON.serialize(crmInsights);
+    String webJson = JSON.serialize(webInsights);
+
+    RRADiagnostics.DiagnosticEntry diag = RRADiagnostics.getInstance()
+      .get('CrossSourceConsolidation');
+    diag.put('crmInsightsCount', crmInsights.size());
+    diag.put('webInsightsCount', webInsights.size());
+    diag.put('crmInsights', JSON.deserializeUntyped(crmJson));
+    diag.put('webInsights', JSON.deserializeUntyped(webJson));
+
+    Map<String, Object> inputs = new Map<String, Object>();
+    inputs.put('Input:CrmRelationships', crmJson);
+    inputs.put('Input:WebRelationships', webJson);
+
+    EinsteinPromptResponse response = EinsteinPromptService.prompt(
+      'RRA_ConsolidateCrossSourceInsights',
+      inputs
+    );
+
+    List<RelationshipInsightsEnvelope.RelatedEntity> consolidated = RelationshipInsightsEnvelope.fromObjectList(
+      response.getJsonList(),
+      null
+    );
+
+    diag.put('consolidatedCount', consolidated.size());
+    diag.put('consolidatedInsights', JSON.deserializeUntyped(JSON.serialize(consolidated)));
+
+    return consolidated;
   }
 }

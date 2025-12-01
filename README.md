@@ -68,12 +68,10 @@ Before installing RRA, ensure your Salesforce org has:
 1. **Configure Salesforce Org Prerequisites**
 
    a. **Enable Agentforce**
-
    - Navigate to **Setup > Agentforce**
    - Enable Agentforce for your org
 
    b. **Create Web Retriever (Agentforce Data Library)**
-
    - Navigate to **Setup > Agentforce Data Library**
    - Click **New**
    - Configure:
@@ -83,13 +81,11 @@ Before installing RRA, ensure your Salesforce org has:
    - Save
 
    c. **Configure Platform Cache**
-
    - Navigate to **Setup > Platform Cache**
    - Create a partition named `rrapicache` (or use your default partition)
    - Allocate memory to both **Org Cache** and **Session Cache**
 
    d. **Disable Data Masking**
-
    - Navigate to **Setup > Einstein Trust Layer**
    - Select **Large Language Model Data Masking**
    - Turn **Off**
@@ -109,7 +105,6 @@ Before installing RRA, ensure your Salesforce org has:
    ```
 
 1. **Activate Custom Record Pages**
-
    - Navigate to **Setup > Lightning App Builder**
    - Open each custom record page:
      - `Account_Record_Page`
@@ -125,7 +120,6 @@ Before installing RRA, ensure your Salesforce org has:
 1. **Verify Prompt Templates**
 
    Navigate to **Setup > Prompt Builder** and verify all templates are active:
-
    - `RRA_CommonNameVariants`
    - `RRA_EntityMatcher`
    - `RRA_EntitiesFromCRM`
@@ -133,6 +127,7 @@ Before installing RRA, ensure your Salesforce org has:
    - `RRA_AppendRelationships`
    - `RRA_DeepWebResearch_Discovery`
    - `RRA_DeepWebResearch_Refinement`
+   - `RRA_ConsolidateCrossSourceInsights`
 
    **Known Issue:** Templates may deploy as inactive. Manually activate if needed, and ensure output mode is set to **JSON**.
 
