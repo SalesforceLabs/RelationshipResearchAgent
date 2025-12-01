@@ -2,6 +2,8 @@ export class RraGraph {
   static BADGE_BACKGROUND_MIN_RADIUS = 6;
   static LINK_BADGE_SIZE = 12;
   static PLUS_BADGE_SIZE = 8;
+  static EDGE_ICON_SIZE = 12;
+  static EDGE_ICON_BG_RADIUS = 8;
 
   static defaultOptions = {
     // CSS selector or SVG element
@@ -180,6 +182,50 @@ export class RraGraph {
       .attr("y1", (d) => d.source.y)
       .attr("x2", (d) => d.target.x)
       .attr("y2", (d) => d.target.y);
+
+    // Add edge icons to indicate source (CRM vs Web)
+    const edgeBadgeG = svg
+      .append("g")
+      .attr("class", "edge-badges")
+      .selectAll("g")
+      .data(links)
+      .enter()
+      .append("g")
+      .attr("class", "edge-badge")
+      .attr("transform", (d) => {
+        // Calculate midpoint of the edge
+        const midX = (d.source.x + d.target.x) / 2;
+        const midY = (d.source.y + d.target.y) / 2;
+        return `translate(${midX},${midY})`;
+      });
+
+    // White background circle for edge icon
+    edgeBadgeG
+      .append("circle")
+      .attr("r", RraGraph.EDGE_ICON_BG_RADIUS)
+      .attr("class", "edge-badge-bg");
+
+    // Icon for CRM links (salesforce1 utility icon)
+    edgeBadgeG
+      .filter((d) => d.isCrmLink)
+      .append("use")
+      .attr("href", this.getIconUtilUrl("salesforce1"))
+      .attr("width", RraGraph.EDGE_ICON_SIZE)
+      .attr("height", RraGraph.EDGE_ICON_SIZE)
+      .attr("x", -RraGraph.EDGE_ICON_SIZE / 2)
+      .attr("y", -RraGraph.EDGE_ICON_SIZE / 2)
+      .attr("class", "edge-icon edge-icon-crm");
+
+    // Icon for web links (world utility icon)
+    edgeBadgeG
+      .filter((d) => !d.isCrmLink)
+      .append("use")
+      .attr("href", this.getIconUtilUrl("world"))
+      .attr("width", RraGraph.EDGE_ICON_SIZE)
+      .attr("height", RraGraph.EDGE_ICON_SIZE)
+      .attr("x", -RraGraph.EDGE_ICON_SIZE / 2)
+      .attr("y", -RraGraph.EDGE_ICON_SIZE / 2)
+      .attr("class", "edge-icon edge-icon-web");
 
     const g = svg
       .append("g")

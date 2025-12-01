@@ -10,6 +10,17 @@
   stroke-dasharray: 4 2;
 }
 
+.edge-badge-bg {
+  fill: #ffffff;
+  stroke: #d0d0d0;
+  stroke-width: 1;
+}
+
+.edge-icon {
+  pointer-events: none;
+  fill: #5c5c5c;
+}
+
 /* Nodes */
 .node-shell {
   fill: #ffffff;
