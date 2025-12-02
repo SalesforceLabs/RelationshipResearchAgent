@@ -8,12 +8,16 @@ export class RraGraph {
   static defaultOptions = {
     // CSS selector or SVG element
     svg: "svg",
-    width: 500, // same w/h dimensions used by ERI1
-    height: 500,
+    width: 600, // increased for better spacing
+    height: 600,
 
     // Geometry
-    radius: 20, // base node radius
-    canvasMargin: 5, // px
+    radius: 20, // base node radius (for layout calculations)
+    pillHeight: 40, // height of pill-shaped nodes
+    pillPadding: 12, // horizontal padding inside pills
+    pillIconTextGap: 8, // gap between icon and text
+    pillBorderRadius: 20, // border radius for pill corners
+    canvasMargin: 20, // increased margin for better spacing
     startAngle: -Math.PI / 2, // start at 12 o'clock
     textOffsetY: 10, // vertical offset for label under node from perimeter
 
@@ -63,7 +67,7 @@ export class RraGraph {
   _layout(nodes, { labelHalfWidth = 0, labelHeight = 0 } = {}) {
     if (!nodes || nodes.length < 1) return new Map();
 
-    const { width, height, radius, canvasMargin, startAngle, textOffsetY } = this.options;
+    const { width, height, radius, canvasMargin, startAngle } = this.options;
 
     const cx = width / 2;
     const cy = height / 2;
@@ -72,13 +76,14 @@ export class RraGraph {
     const related = nodes.filter((n) => n !== focus);
     const N = related.length;
 
-    // Per-side padding that accounts for node size + label footprint
-    const padX = canvasMargin + Math.max(radius, labelHalfWidth);
+    // Per-side padding that accounts for pill node size
+    // Add extra padding to ensure pills don't get cut off and edges are visible
+    const padX = canvasMargin + labelHalfWidth + 20;
+    const padY = canvasMargin + labelHeight / 2 + 20;
     const padLeft = padX;
     const padRight = padX;
-
-    const padTop = canvasMargin + radius; // no label above
-    const padBottom = canvasMargin + radius + textOffsetY + labelHeight;
+    const padTop = padY;
+    const padBottom = padY;
 
     // Max allowed orbit radius so nothing crosses any side
     const rXLeft = cx - padLeft;
@@ -86,7 +91,8 @@ export class RraGraph {
     const rYTop = cy - padTop;
     const rYBottom = height - cy - padBottom;
 
-    const circleR = Math.max(radius * 3, Math.min(rXLeft, rXRight, rYTop, rYBottom));
+    // Increase multiplier to 8 for much better spacing and edge visibility
+    const circleR = Math.max(radius * 8, Math.min(rXLeft, rXRight, rYTop, rYBottom));
 
     if (focus) {
       focus.x = cx;
@@ -134,7 +140,10 @@ export class RraGraph {
       height,
       radius,
       iconSize,
-      textOffsetY,
+      pillHeight,
+      pillPadding,
+      pillIconTextGap,
+      pillBorderRadius,
       maxLabelChars
     } = this.options;
     const svg = d3.select(svgSelector).attr("width", width).attr("height", height);
@@ -149,9 +158,22 @@ export class RraGraph {
       labelClass: "node-label"
     });
 
+    // Calculate pill width for each node
+    data.nodes.forEach((node) => {
+      const labelWidth = measureLabelMetrics(svg, [getLabelText(node)], {
+        labelClass: "node-label"
+      }).maxLabelWidth;
+      // Include badge button space for non-focus nodes (40px for button + spacing)
+      const badgeSpace = node.isFocus ? 0 : 40;
+      node.pillWidth =
+        pillPadding + iconSize + pillIconTextGap + labelWidth + pillPadding + badgeSpace;
+      node.pillHalfWidth = node.pillWidth / 2;
+      node.pillHalfHeight = pillHeight / 2;
+    });
+
     const nodeById = this._layout(data.nodes, {
-      labelHalfWidth: maxLabelWidth / 2,
-      labelHeight
+      labelHalfWidth: maxLabelWidth / 2 + pillPadding + iconSize,
+      labelHeight: pillHeight
     });
 
     const links = (data.links || [])
@@ -241,16 +263,17 @@ export class RraGraph {
         }
       });
 
-    g.append("circle")
-      .attr("r", radius)
-      .attr("class", "node-shell")
-      .classed("node-shell--focus", (d) => !!d.isFocus);
-
-    // Inner ring for non-focus nodes
-    g.append("circle") //.filter((d) => !d.isFocus)
-      .attr("r", radius - 3)
+    // Pill-shaped background (rounded rectangle)
+    g.append("rect")
+      .attr("x", (d) => -d.pillHalfWidth)
+      .attr("y", (d) => -d.pillHalfHeight)
+      .attr("width", (d) => d.pillWidth)
+      .attr("height", pillHeight)
+      .attr("rx", pillBorderRadius)
+      .attr("ry", pillBorderRadius)
       .attr("class", (d) => {
-        const cl = ["node-inner"];
+        const cl = ["node-pill"];
+        if (d.isFocus) cl.push("node-pill--focus");
         if (d.isFocus || d.isCrmLink) {
           cl.push("node-crm");
           if (d.recordType) cl.push(`node-${d.recordType.toLowerCase()}`);
@@ -258,59 +281,75 @@ export class RraGraph {
         return cl.join(" ");
       });
 
-    // Centered Salesforce icon
-    // Note: we center by translating the <use> so its mid-point sits at 0,0.
+    // Colored circle background for icon
+    g.append("circle")
+      .attr("r", iconSize / 2)
+      .attr("cx", (d) => -d.pillHalfWidth + pillPadding + iconSize / 2)
+      .attr("cy", 0)
+      .attr("class", (d) => {
+        const cl = ["node-icon-bg"];
+        if (d.isFocus || d.isCrmLink) {
+          cl.push("node-icon-bg-crm");
+          if (d.recordType) cl.push(`node-icon-bg-${d.recordType.toLowerCase()}`);
+        }
+        return cl.join(" ");
+      });
+
+    // Icon on the left side of the pill
     g.append("use")
       .attr("href", (d) => this.getIconUrl(this.getIconIdForNode(d)))
       .attr("width", iconSize)
       .attr("height", iconSize)
-      .attr("x", -iconSize / 2)
+      .attr("x", (d) => -d.pillHalfWidth + pillPadding)
       .attr("y", -iconSize / 2)
       .attr("class", "node-icon");
 
-    // Badge overlay (bottom-right), shown for nodes that aren't the focus
+    // Text label on the right side of the icon
+    g.append("text")
+      .attr("class", "node-label")
+      .attr("x", (d) => -d.pillHalfWidth + pillPadding + iconSize + pillIconTextGap)
+      .attr("y", 0)
+      .attr("text-anchor", "start")
+      .attr("dominant-baseline", "central")
+      .text((d) => getLabelText(d));
+
+    // Badge overlay (right edge, vertically centered), shown for nodes that aren't the focus
     const badgeG = g
       .filter((d) => !d.isFocus)
       .append("g")
       .attr("class", "node-badge");
 
-    // Small white disc to keep badge legible
+    // White circle background for badge button
     badgeG
       .append("circle")
-      .attr("r", Math.max(RraGraph.BADGE_BACKGROUND_MIN_RADIUS, RraGraph.LINK_BADGE_SIZE / 2))
-      .attr("cx", radius * Math.cos(Math.PI / 4))
-      .attr("cy", radius * Math.sin(Math.PI / 4))
+      .attr("r", 14)
+      .attr("cx", (d) => d.pillHalfWidth - 20)
+      .attr("cy", 0)
       .attr("class", "node-badge-bg");
 
-    // Link badge glyph for CRM records
+    // Link badge icon for CRM records
     badgeG
       .filter((d) => d.recordId)
       .append("use")
       .attr("href", this.getIconUrl("link"))
-      .attr("width", RraGraph.LINK_BADGE_SIZE)
-      .attr("height", RraGraph.LINK_BADGE_SIZE)
-      .attr("x", radius * Math.cos(Math.PI / 4) - RraGraph.LINK_BADGE_SIZE / 2)
-      .attr("y", radius * Math.sin(Math.PI / 4) - RraGraph.LINK_BADGE_SIZE / 2);
+      .attr("width", 16)
+      .attr("height", 16)
+      .attr("x", (d) => d.pillHalfWidth - 20 - 8)
+      .attr("y", -8)
+      .attr("class", "node-badge-icon");
 
-    // Plus sign badge glyph for new records
+    // Plus sign badge icon for new records
     badgeG
       .filter((d) => !d.recordId)
       .append("use")
       .attr("href", this.getIconUtilUrl("add"))
-      .attr("width", RraGraph.PLUS_BADGE_SIZE)
-      .attr("height", RraGraph.PLUS_BADGE_SIZE)
-      .attr("x", radius * Math.cos(Math.PI / 4) - RraGraph.PLUS_BADGE_SIZE / 2)
-      .attr("y", radius * Math.sin(Math.PI / 4) - RraGraph.PLUS_BADGE_SIZE / 2);
+      .attr("width", 16)
+      .attr("height", 16)
+      .attr("x", (d) => d.pillHalfWidth - 20 - 8)
+      .attr("y", -8)
+      .attr("class", "node-badge-icon");
 
-    // Label under node
-    g.append("text")
-      .attr("class", "node-label")
-      .attr("y", radius + textOffsetY)
-      .attr("text-anchor", "middle")
-      .attr("dominant-baseline", "hanging")
-      .text((d) => getLabelText(d));
-
-    this._setupTooltip(svg, g, radius);
+    this._setupTooltip(svg, g, pillHeight / 2);
   }
 
   _truncateUrl(url, maxLength = 100) {
