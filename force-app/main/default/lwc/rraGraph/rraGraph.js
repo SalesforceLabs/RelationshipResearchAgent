@@ -13,16 +13,15 @@ export class RraGraph {
 
     // Geometry
     radius: 20, // base node radius (for layout calculations)
-    pillHeight: 40, // height of pill-shaped nodes
-    pillPadding: 12, // horizontal padding inside pills
-    pillIconTextGap: 8, // gap between icon and text
-    pillBorderRadius: 20, // border radius for pill corners
+    shellHeight: 40, // height of node shells (rounded rectangles)
+    shellPadding: 12, // horizontal padding inside shells
+    shellIconTextGap: 8, // gap between icon and text
+    shellBorderRadius: 20, // border radius for shell corners
     canvasMargin: 20, // increased margin for better spacing
     startAngle: -Math.PI / 2, // start at 12 o'clock
     textOffsetY: 10, // vertical offset for label under node from perimeter
 
     // Icon sprite (Salesforce symbols.svg)
-    //
     // Refer to README for instructions on how to obtain this asset.
     iconsUrl: "",
 
@@ -61,13 +60,75 @@ export class RraGraph {
     while (svg.firstChild) svg.removeChild(svg.firstChild);
   }
 
+  // Distance we can travel from the node shell center along (dx, dy) before leaving its bounding rectangle.
+  _distanceToRectEdge(halfWidth = this.options.radius, halfHeight = this.options.radius, dx, dy) {
+    const EPS = 1e-6;
+    const absDx = Math.abs(dx);
+    const absDy = Math.abs(dy);
+
+    let tx = Infinity;
+    let ty = Infinity;
+
+    if (absDx > EPS) {
+      tx = halfWidth / absDx;
+    }
+    if (absDy > EPS) {
+      ty = halfHeight / absDy;
+    }
+
+    if (!isFinite(tx) && !isFinite(ty)) {
+      return 0;
+    }
+
+    return Math.min(tx, ty);
+  }
+
+  _maxCenterDistanceForNode(cx, cy, { x: dx, y: dy }, node) {
+    const { width, height, canvasMargin } = this.options;
+    const halfWidth = node.shellHalfWidth ?? this.options.radius;
+    const halfHeight = node.shellHalfHeight ?? this.options.radius;
+    const EPS = 1e-6;
+
+    let maxR = Infinity;
+
+    if (Math.abs(dx) > EPS) {
+      if (dx > 0) {
+        const limit = width - canvasMargin - halfWidth;
+        const r = (limit - cx) / dx;
+        maxR = Math.min(maxR, r);
+      } else {
+        const limit = canvasMargin + halfWidth;
+        const r = (limit - cx) / dx;
+        maxR = Math.min(maxR, r);
+      }
+    }
+
+    if (Math.abs(dy) > EPS) {
+      if (dy > 0) {
+        const limit = height - canvasMargin - halfHeight;
+        const r = (limit - cy) / dy;
+        maxR = Math.min(maxR, r);
+      } else {
+        const limit = canvasMargin + halfHeight;
+        const r = (limit - cy) / dy;
+        maxR = Math.min(maxR, r);
+      }
+    }
+
+    if (!isFinite(maxR)) {
+      maxR = Math.min(width, height) / 2;
+    }
+
+    return Math.max(0, maxR);
+  }
+
   // Compute a deterministic radial layout with the focus node at the center and all other nodes
   // evenly spaced around a circle.  Mutates nodes to add x/y, returning a Map id->node for
   // convenience.
-  _layout(nodes, { labelHalfWidth = 0, labelHeight = 0 } = {}) {
+  _layout(nodes) {
     if (!nodes || nodes.length < 1) return new Map();
 
-    const { width, height, radius, canvasMargin, startAngle } = this.options;
+    const { width, height, radius, startAngle } = this.options;
 
     const cx = width / 2;
     const cy = height / 2;
@@ -76,34 +137,70 @@ export class RraGraph {
     const related = nodes.filter((n) => n !== focus);
     const N = related.length;
 
-    // Per-side padding that accounts for pill node size
-    // Add extra padding to ensure pills don't get cut off and edges are visible
-    const padX = canvasMargin + labelHalfWidth + 20;
-    const padY = canvasMargin + labelHeight / 2 + 20;
-    const padLeft = padX;
-    const padRight = padX;
-    const padTop = padY;
-    const padBottom = padY;
-
-    // Max allowed orbit radius so nothing crosses any side
-    const rXLeft = cx - padLeft;
-    const rXRight = width - cx - padRight;
-    const rYTop = cy - padTop;
-    const rYBottom = height - cy - padBottom;
-
-    // Increase multiplier to 8 for much better spacing and edge visibility
-    const circleR = Math.max(radius * 8, Math.min(rXLeft, rXRight, rYTop, rYBottom));
-
     if (focus) {
       focus.x = cx;
       focus.y = cy;
     }
 
-    for (let i = 0; i < N; i++) {
-      const theta = startAngle + (2 * Math.PI * i) / Math.max(1, N);
-      const n = related[i];
-      n.x = cx + circleR * Math.cos(theta);
-      n.y = cy + circleR * Math.sin(theta);
+    // If no related nodes, return early
+    if (N === 0) {
+      return new Map(nodes.map((n) => [n.id, n]));
+    }
+
+    // Calculate the layout direction and constraints for each related node
+    const focusHalfWidth = focus?.shellHalfWidth ?? radius;
+    const focusHalfHeight = focus?.shellHalfHeight ?? radius;
+
+    const nodeLayoutInfo = related.map((node, index) => {
+      const theta = startAngle + (2 * Math.PI * index) / N;
+      const dx = Math.cos(theta);
+      const dy = Math.sin(theta);
+      const dir = { x: dx, y: dy };
+
+      const sourceOffset = this._distanceToRectEdge(focusHalfWidth, focusHalfHeight, dx, dy);
+      const targetOffset = this._distanceToRectEdge(
+        node.shellHalfWidth ?? radius,
+        node.shellHalfHeight ?? radius,
+        -dx,
+        -dy
+      );
+
+      const maxCenterDistance = this._maxCenterDistanceForNode(cx, cy, dir, node);
+      const maxEdgeLength = maxCenterDistance - sourceOffset - targetOffset;
+
+      return {
+        node,
+        dir,
+        theta,
+        sourceOffset,
+        targetOffset,
+        maxCenterDistance,
+        maxEdgeLength: Math.max(0, maxEdgeLength)
+      };
+    });
+
+    // Determine the target visible edge length that keeps every node within bounds
+    const preferredEdgeLength = radius * 6;
+    const edgeLengthLimit = nodeLayoutInfo.reduce(
+      (minLimit, info) => Math.min(minLimit, info.maxEdgeLength),
+      Infinity
+    );
+    const targetEdgeLength = Math.max(
+      0,
+      Math.min(
+        edgeLengthLimit,
+        isFinite(preferredEdgeLength) ? preferredEdgeLength : edgeLengthLimit
+      )
+    );
+
+    // Position each node using the computed target edge length
+    for (const info of nodeLayoutInfo) {
+      const { node, dir, sourceOffset, targetOffset, maxCenterDistance } = info;
+      const desiredCenterDistance = targetEdgeLength + sourceOffset + targetOffset;
+      const centerDistance = Math.min(maxCenterDistance, desiredCenterDistance);
+
+      node.x = cx + centerDistance * dir.x;
+      node.y = cy + centerDistance * dir.y;
     }
 
     return new Map(nodes.map((n) => [n.id, n]));
@@ -138,12 +235,11 @@ export class RraGraph {
       svg: svgSelector,
       width,
       height,
-      radius,
       iconSize,
-      pillHeight,
-      pillPadding,
-      pillIconTextGap,
-      pillBorderRadius,
+      shellHeight,
+      shellPadding,
+      shellIconTextGap,
+      shellBorderRadius,
       maxLabelChars
     } = this.options;
     const svg = d3.select(svgSelector).attr("width", width).attr("height", height);
@@ -153,28 +249,20 @@ export class RraGraph {
       return t.length > maxLabelChars ? t.slice(0, maxLabelChars) + "…" : t;
     };
 
-    const labels = (data.nodes ?? []).map(getLabelText);
-    const { maxLabelWidth, labelHeight } = measureLabelMetrics(svg, labels, {
-      labelClass: "node-label"
-    });
-
-    // Calculate pill width for each node
+    // Calculate shell width for each node
     data.nodes.forEach((node) => {
       const labelWidth = measureLabelMetrics(svg, [getLabelText(node)], {
         labelClass: "node-label"
       }).maxLabelWidth;
       // Include badge button space for non-focus nodes (40px for button + spacing)
       const badgeSpace = node.isFocus ? 0 : 40;
-      node.pillWidth =
-        pillPadding + iconSize + pillIconTextGap + labelWidth + pillPadding + badgeSpace;
-      node.pillHalfWidth = node.pillWidth / 2;
-      node.pillHalfHeight = pillHeight / 2;
+      node.shellWidth =
+        shellPadding + iconSize + shellIconTextGap + labelWidth + shellPadding + badgeSpace;
+      node.shellHalfWidth = node.shellWidth / 2;
+      node.shellHalfHeight = shellHeight / 2;
     });
 
-    const nodeById = this._layout(data.nodes, {
-      labelHalfWidth: maxLabelWidth / 2 + pillPadding + iconSize,
-      labelHeight: pillHeight
-    });
+    const nodeById = this._layout(data.nodes);
 
     const links = (data.links || [])
       .map((link) => {
@@ -263,17 +351,17 @@ export class RraGraph {
         }
       });
 
-    // Pill-shaped background (rounded rectangle)
+    // Node shell background (rounded rectangle)
     g.append("rect")
-      .attr("x", (d) => -d.pillHalfWidth)
-      .attr("y", (d) => -d.pillHalfHeight)
-      .attr("width", (d) => d.pillWidth)
-      .attr("height", pillHeight)
-      .attr("rx", pillBorderRadius)
-      .attr("ry", pillBorderRadius)
+      .attr("x", (d) => -d.shellHalfWidth)
+      .attr("y", (d) => -d.shellHalfHeight)
+      .attr("width", (d) => d.shellWidth)
+      .attr("height", shellHeight)
+      .attr("rx", shellBorderRadius)
+      .attr("ry", shellBorderRadius)
       .attr("class", (d) => {
-        const cl = ["node-pill"];
-        if (d.isFocus) cl.push("node-pill--focus");
+        const cl = ["node-shell"];
+        if (d.isFocus) cl.push("node-shell--focus");
         if (d.isFocus || d.isCrmLink) {
           cl.push("node-crm");
           if (d.recordType) cl.push(`node-${d.recordType.toLowerCase()}`);
@@ -284,7 +372,7 @@ export class RraGraph {
     // Colored circle background for icon
     g.append("circle")
       .attr("r", iconSize / 2)
-      .attr("cx", (d) => -d.pillHalfWidth + pillPadding + iconSize / 2)
+      .attr("cx", (d) => -d.shellHalfWidth + shellPadding + iconSize / 2)
       .attr("cy", 0)
       .attr("class", (d) => {
         const cl = ["node-icon-bg"];
@@ -295,22 +383,23 @@ export class RraGraph {
         return cl.join(" ");
       });
 
-    // Icon on the left side of the pill
+    // Icon on the left side of the shell
     g.append("use")
       .attr("href", (d) => this.getIconUrl(this.getIconIdForNode(d)))
       .attr("width", iconSize)
       .attr("height", iconSize)
-      .attr("x", (d) => -d.pillHalfWidth + pillPadding)
+      .attr("x", (d) => -d.shellHalfWidth + shellPadding)
       .attr("y", -iconSize / 2)
       .attr("class", "node-icon");
 
     // Text label on the right side of the icon
     g.append("text")
       .attr("class", "node-label")
-      .attr("x", (d) => -d.pillHalfWidth + pillPadding + iconSize + pillIconTextGap)
+      .attr("x", (d) => -d.shellHalfWidth + shellPadding + iconSize + shellIconTextGap)
       .attr("y", 0)
       .attr("text-anchor", "start")
       .attr("dominant-baseline", "central")
+      .style("pointer-events", "auto")
       .text((d) => getLabelText(d));
 
     // Badge overlay (right edge, vertically centered), shown for nodes that aren't the focus
@@ -323,7 +412,7 @@ export class RraGraph {
     badgeG
       .append("circle")
       .attr("r", 14)
-      .attr("cx", (d) => d.pillHalfWidth - 20)
+      .attr("cx", (d) => d.shellHalfWidth - 20)
       .attr("cy", 0)
       .attr("class", "node-badge-bg");
 
@@ -334,7 +423,7 @@ export class RraGraph {
       .attr("href", this.getIconUrl("link"))
       .attr("width", 16)
       .attr("height", 16)
-      .attr("x", (d) => d.pillHalfWidth - 20 - 8)
+      .attr("x", (d) => d.shellHalfWidth - 20 - 8)
       .attr("y", -8)
       .attr("class", "node-badge-icon");
 
@@ -345,11 +434,13 @@ export class RraGraph {
       .attr("href", this.getIconUtilUrl("add"))
       .attr("width", 16)
       .attr("height", 16)
-      .attr("x", (d) => d.pillHalfWidth - 20 - 8)
+      .attr("x", (d) => d.shellHalfWidth - 20 - 8)
       .attr("y", -8)
       .attr("class", "node-badge-icon");
 
-    this._setupTooltip(svg, g, pillHeight / 2);
+    this._setupTooltip(svg, g, shellHeight / 2, {
+      shouldShow: (event) => Boolean(event.target.closest(".node-label"))
+    });
   }
 
   _truncateUrl(url, maxLength = 100) {
@@ -399,7 +490,7 @@ export class RraGraph {
       .style("z-index", "9999");
   }
 
-  _setupTooltip(svg, nodeSelection, nodeRadius) {
+  _setupTooltip(svg, nodeSelection, nodeRadius, { shouldShow = () => true } = {}) {
     const tooltip = this._createTooltip();
     let hideTimeout = null;
     let currentNodeId = null;
@@ -411,7 +502,7 @@ export class RraGraph {
 
     const clearHideTimeout = () => {
       if (hideTimeout) {
-        clearTimeout(hideTimeout);
+        window.clearTimeout(hideTimeout);
         hideTimeout = null;
       }
     };
@@ -428,6 +519,9 @@ export class RraGraph {
     };
 
     nodeSelection.on("mouseover", (event, d) => {
+      if (!shouldShow(event, d)) {
+        return;
+      }
       clearHideTimeout();
 
       const content = this._buildTooltipContent(d);
@@ -447,8 +541,9 @@ export class RraGraph {
         .style("pointer-events", "auto");
     });
 
-    nodeSelection.on("mouseout", (event, d) => {
-      hideTimeout = setTimeout(() => {
+    nodeSelection.on("mouseout", (event) => {
+      // eslint-disable-next-line @lwc/lwc/no-async-operation
+      hideTimeout = window.setTimeout(() => {
         const tooltipNode = tooltip.node();
         const currentTarget = event.currentTarget;
 
@@ -474,7 +569,8 @@ export class RraGraph {
         // Only set hide timeout if tooltip is currently visible
         const currentOpacity = parseFloat(tooltip.style("opacity"));
         if (currentOpacity > 0) {
-          hideTimeout = setTimeout(hideTooltip, TOOLTIP_LEAVE_DELAY);
+          // eslint-disable-next-line @lwc/lwc/no-async-operation
+          hideTimeout = window.setTimeout(hideTooltip, TOOLTIP_LEAVE_DELAY);
         }
       });
   }
@@ -657,9 +753,8 @@ function measureLabelMetrics(svg, labels, { labelClass = "node-label" } = {}) {
 function isBlank(v) {
   if (typeof v === "string") {
     return v.trim().length < 1;
-  } else {
-    return true;
   }
+  return true;
 }
 
 function coalesce(...v) {
