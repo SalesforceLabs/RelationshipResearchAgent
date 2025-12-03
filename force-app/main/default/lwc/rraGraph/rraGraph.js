@@ -492,7 +492,6 @@ export class RraGraph {
 
   _setupTooltip(svg, nodeSelection, nodeRadius, { shouldShow = () => true } = {}) {
     const tooltip = this._createTooltip();
-    let hideTimeout = null;
     let currentNodeId = null;
 
     const SHOW_DURATION = 200;
@@ -500,21 +499,21 @@ export class RraGraph {
     const MOUSEOUT_DELAY = 300;
     const TOOLTIP_LEAVE_DELAY = 300;
 
-    const clearHideTimeout = () => {
-      if (hideTimeout) {
-        window.clearTimeout(hideTimeout);
-        hideTimeout = null;
-      }
+    const cancelPendingHide = () => {
+      tooltip.interrupt();
+      tooltip.style("pointer-events", "auto");
     };
 
-    const hideTooltip = () => {
+    const hideTooltip = (delay = 0) => {
       tooltip
+        .interrupt()
         .transition()
+        .delay(delay)
         .duration(HIDE_DURATION)
         .style("opacity", 0)
-        .style("pointer-events", "none")
         .on("end", () => {
           currentNodeId = null;
+          tooltip.style("pointer-events", "none");
         });
     };
 
@@ -522,7 +521,7 @@ export class RraGraph {
       if (!shouldShow(event, d)) {
         return;
       }
-      clearHideTimeout();
+      cancelPendingHide();
 
       const content = this._buildTooltipContent(d);
       tooltip.html(content);
@@ -541,37 +540,17 @@ export class RraGraph {
         .style("pointer-events", "auto");
     });
 
-    nodeSelection.on("mouseout", (event) => {
-      // eslint-disable-next-line @lwc/lwc/no-async-operation
-      hideTimeout = window.setTimeout(() => {
-        const tooltipNode = tooltip.node();
-        const currentTarget = event.currentTarget;
-
-        const tooltipHovered = tooltipNode && tooltipNode.matches(":hover");
-        const nodeHovered = currentTarget && currentTarget.matches(":hover");
-
-        if (!tooltipHovered && !nodeHovered) {
-          hideTooltip();
-        }
-      }, MOUSEOUT_DELAY);
+    nodeSelection.on("mouseout", () => {
+      hideTooltip(MOUSEOUT_DELAY);
     });
 
     tooltip
       .on("mouseover", () => {
-        // Only keep tooltip visible if it's currently visible (opacity > 0)
-        const currentOpacity = parseFloat(tooltip.style("opacity"));
-        if (currentOpacity > 0) {
-          clearHideTimeout();
-          tooltip.style("opacity", 0.9).style("pointer-events", "auto");
-        }
+        cancelPendingHide();
+        tooltip.style("opacity", 0.9).style("pointer-events", "auto");
       })
       .on("mouseout", () => {
-        // Only set hide timeout if tooltip is currently visible
-        const currentOpacity = parseFloat(tooltip.style("opacity"));
-        if (currentOpacity > 0) {
-          // eslint-disable-next-line @lwc/lwc/no-async-operation
-          hideTimeout = window.setTimeout(hideTooltip, TOOLTIP_LEAVE_DELAY);
-        }
+        hideTooltip(TOOLTIP_LEAVE_DELAY);
       });
   }
 }
