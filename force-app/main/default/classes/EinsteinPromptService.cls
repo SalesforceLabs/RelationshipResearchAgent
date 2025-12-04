@@ -126,6 +126,48 @@ public with sharing class EinsteinPromptService {
       throw e;
     }
   }
+  private class RunFlowInputs {
+    final Map<String, Object> unwrappedInputs = new Map<String, Object>();
+    public void add(String key, Object value) {
+      String unwrappedKey = key;
+      if (key.startsWith('Input:')) {
+        unwrappedKey = key.substring('Input:'.length());
+      }
+      unwrappedInputs.put(unwrappedKey, value);
+    }
+  }
+
+  // executes a prompt within a Flow context
+  public static EinsteinPromptResponse runWithFlow(EinsteinPromptRequest request) {
+    RunFlowInputs inputs = new RunFlowInputs();
+    Map<String, Object> unwrappedInputs = new Map<String, Object>();
+    for (String key : request.inputParams.keySet()) {
+      inputs.add(key, request.inputParams.get(key).value);
+    }
+    return executePromptWithFlow(request.templateApiName, inputs);
+  }
+
+  // Convenience overload. Executes a prompt within a Flow context,
+  // and also unwraps the input keys by stripping any "Input:" prefix.
+  public static EinsteinPromptResponse runWithFlow(
+    String templateApiName,
+    Map<String, Object> inputParams
+  ) {
+    RunFlowInputs inputs = new RunFlowInputs();
+    for (String key : inputParams.keySet()) {
+      inputs.add(key, inputParams.get(key));
+    }
+    return executePromptWithFlow(templateApiName, inputs);
+  }
+
+  static EinsteinPromptResponse executePromptWithFlow(
+    String templateApiName,
+    RunFlowInputs inputs
+  ) {
+    Flow.Interview flow = Flow.Interview.createInterview(templateApiName, inputs.unwrappedInputs);
+    flow.start();
+    return EinsteinPromptResponse.fromFlowInterview(flow);
+  }
 
   // Convenience overload. Executes a prompt with a ConnectApi.WrappedValue map
   // as input.

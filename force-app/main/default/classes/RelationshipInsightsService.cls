@@ -5,22 +5,24 @@ public with sharing class RelationshipInsightsService {
 
   public static RelationshipInsightsEnvelope getInsights(
     ICrmReferentialEntity targetEntity,
-    Boolean useDeepWebSearch,
-    Boolean useRecordContext,
-    Boolean isNewResearch,
-    RRARelationships__c rraRecord
+    RRARelationships__c rraRecord,
+    RRAClientOptions options
   ) {
     List<RelationshipInsightsEnvelope.RelatedEntity> webInsights = getWebInsights(
       targetEntity,
-      useDeepWebSearch,
-      useRecordContext
+      options.useDeepWebSearch,
+      options.useRecordContext,
+      options.parseEntityMatcherMode()
     );
 
-    if (!isNewResearch) {
+    if (!options.isNewResearch) {
       webInsights = appendWebInsights(targetEntity, webInsights, rraRecord);
     }
 
-    List<RelationshipInsightsEnvelope.RelatedEntity> crmInsights = getCrmInsights(targetEntity);
+    List<RelationshipInsightsEnvelope.RelatedEntity> crmInsights = getCrmInsights(
+      targetEntity,
+      options.parseEntityMatcherMode()
+    );
 
     // Consolidate web and CRM insights to eliminate duplicates and enrich relationships
     List<RelationshipInsightsEnvelope.RelatedEntity> consolidated = consolidateCrossSourceInsights(
@@ -37,7 +39,8 @@ public with sharing class RelationshipInsightsService {
   public static List<RelationshipInsightsEnvelope.RelatedEntity> getWebInsights(
     ICrmReferentialEntity targetEntity,
     Boolean useDeepWebSearch,
-    Boolean useRecordContext
+    Boolean useRecordContext,
+    EntityMatcher.EntityMatcherMode entityMatcherMode
   ) {
     List<RelationshipInsightsEnvelope.RelatedEntity> rels;
 
@@ -49,8 +52,10 @@ public with sharing class RelationshipInsightsService {
     if (useDeepWebSearch) {
       System.debug('Using Deep Web Research Engine for entity: ' + targetEntity.getName());
       String deepWebResults = DeepWebResearchEngine.run(targetEntity, recordContextSearchTerms);
+      // use our routines to unfence JSON into objects.
+      List<Object> deepWebData = (List<Object>) EinsteinPromptResponse.parseJson(deepWebResults);
       rels = RelationshipInsightsEnvelope.fromObjectList(
-        (List<Object>) JSON.deserializeUntyped(deepWebResults),
+        deepWebData,
         RelationshipInsightsEnvelope.SOURCE_WEB
       );
       System.debug('Related entities from deep web research:');
@@ -66,7 +71,7 @@ public with sharing class RelationshipInsightsService {
       inputs.put('Input:SearchTerms', targetEntity.getName() + ' ' + searchSuffix);
 
       final EinsteinPromptResponse response = EinsteinPromptService.prompt(
-        'RRA_DeepWebResearch_Discovery',
+        RRAPromptTemplates.DEEP_WEB_RESEARCH_DISCOVERY,
         inputs
       );
 
@@ -78,22 +83,54 @@ public with sharing class RelationshipInsightsService {
     }
 
     RelationshipInsightsEnvelope.dump(rels);
-    matchAgainstCrmEntities(rels);
+    matchAgainstCrmEntities(rels, entityMatcherMode);
     return rels;
   }
 
   public static List<RelationshipInsightsEnvelope.RelatedEntity> getCrmInsights(
-    ICrmReferentialEntity targetEntity
+    ICrmReferentialEntity targetEntity,
+    EntityMatcher.EntityMatcherMode entityMatcherMode
   ) {
+    // check if we have anything in CRM that matches the target entity name.
+    final List<EntityMatcher.EntityInfoMatch> rawMatches = EntityMatcher.findMatchesSingle(
+        targetEntity.getName(),
+        entityMatcherMode
+      )
+      .matches;
+    String excludeId = targetEntity.getId();
     CrmRelationshipInsightsPayloadAssembler asm = new CrmRelationshipInsightsPayloadAssembler();
-    CrmDataDtos.CrmDataPayload payload = asm.build();
+    asm.addEntity(targetEntity);
+    if (rawMatches != null) {
+      for (EntityMatcher.EntityInfoMatch entityMatch : rawMatches) {
+        asm.addEntity(entityMatch.info);
+      }
+    }
+    // this adds CRM data from detected database Ids.
+    asm.build();
+    Integer foundSize = asm.size();
+    if (foundSize == 0) {
+      System.debug('getCrmInsights found no matching records for: ' + targetEntity.getName());
+    } else {
+      System.debug(
+        'getCrmInsights found ' +
+          foundSize.toString() +
+          ' matching records for: ' +
+          targetEntity.getName()
+      );
+    }
+    if (asm.size() < 3) {
+      // CRM data insufficient, add more recent records in hope of getting something useful.
+      System.debug('getCrmInsights will get newest records to try to find more insights');
+      asm.buildWithNewestRecords();
+    }
 
     CrmRelationshipInsightsProcessor proc = new CrmRelationshipInsightsProcessor(targetEntity);
-    return proc.generateInsights(payload);
+    return proc.generateInsights(asm.getPayload());
   }
 
   private static void matchAgainstCrmEntities(
-    List<RelationshipInsightsEnvelope.RelatedEntity> rels
+    List<RelationshipInsightsEnvelope.RelatedEntity> rels,
+    EntityMatcher.EntityMatcherMode entityMatcherMode
   ) {
     for (RelationshipInsightsEnvelope.RelatedEntity rel : rels) {
       if (rel == null) {
@@ -108,12 +145,16 @@ public with sharing class RelationshipInsightsService {
       }
 
       // TODO: use findMatchesMulti to optimize.
-      final List<EntityMatcher.EntityInfoMatch> matches = EntityMatcher.findMatchesSingle(
-          rel.entityName
-        )
-        .matches;
+      EntityMatcher.MatchedEntity matchedEntity = EntityMatcher.findMatchesSingle(
+        rel.entityName,
+        entityMatcherMode
+      );
+      if (matchedEntity == null || matchedEntity.matches == null) {
+        System.debug('No CRM match found for: ' + rel.entityName);
+        continue;
+      }
 
-      EntityMatcher.EntityInfoMatch bestMatch = findBestSObjectMatch(matches, true);
+      EntityMatcher.EntityInfoMatch bestMatch = findBestSObjectMatch(matchedEntity.matches, true);
       if (bestMatch == null) {
         System.debug('No CRM match found for: ' + rel.entityName);
         continue;
@@ -180,7 +221,7 @@ public with sharing class RelationshipInsightsService {
       );
 
     EinsteinPromptResponse response = EinsteinPromptService.prompt(
-      'RRA_AppendRelationships',
+      RRAPromptTemplates.APPEND_RELATIONSHIPS,
       inputs
     );
 
@@ -227,7 +268,7 @@ public with sharing class RelationshipInsightsService {
     inputs.put('Input:WebRelationships', webJson);
 
     EinsteinPromptResponse response = EinsteinPromptService.prompt(
-      'RRA_ConsolidateCrossSourceInsights',
+      RRAPromptTemplates.CONSOLIDATE_CROSS_SOURCE_INSIGHTS,
       inputs
     );
 
