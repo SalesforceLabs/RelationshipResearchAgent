@@ -154,7 +154,7 @@ public with sharing class EntityMatcher {
 
         promptInput.put('Input:CRMData', JSON.serialize(matches));
         EinsteinPromptResponse response = EinsteinPromptService.prompt(
-          EntityMatcher.PROMPT_TEMPLATE_NAME,
+          RRAPromptTemplates.ENTITY_MATCHER,
           promptInput
         );
         List<EntityMatcher.MatchedEntityJSON> resolvedEntities = (List<EntityMatcher.MatchedEntityJSON>) response.getJson(

@@ -66,7 +66,7 @@ public with sharing class RelationshipInsightsService {
       inputs.put('Input:SearchTerms', targetEntity.getName() + ' ' + searchSuffix);
 
       final EinsteinPromptResponse response = EinsteinPromptService.prompt(
-        'RRA_DeepWebResearch_Discovery',
+        RRAPromptTemplates.DEEP_WEB_RESEARCH_DISCOVERY,
         inputs
       );
 
@@ -180,7 +180,7 @@ public with sharing class RelationshipInsightsService {
       );
 
     EinsteinPromptResponse response = EinsteinPromptService.prompt(
-      'RRA_AppendRelationships',
+      RRAPromptTemplates.APPEND_RELATIONSHIPS,
       inputs
     );
 
@@ -227,7 +227,7 @@ public with sharing class RelationshipInsightsService {
     inputs.put('Input:WebRelationships', webJson);
 
     EinsteinPromptResponse response = EinsteinPromptService.prompt(
-      'RRA_ConsolidateCrossSourceInsights',
+      RRAPromptTemplates.CONSOLIDATE_CROSS_SOURCE_INSIGHTS,
       inputs
     );
 

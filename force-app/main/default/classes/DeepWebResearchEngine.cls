@@ -87,7 +87,10 @@ public with sharing class DeepWebResearchEngine {
   }
 
   private static ResearchStage executeDiscoveryStage(ResearchContext context) {
-    ResearchStage stage = new ResearchStage('Stage1', 'RRA_DeepWebResearch_Discovery');
+    ResearchStage stage = new ResearchStage(
+      'Stage1',
+      RRAPromptTemplates.DEEP_WEB_RESEARCH_DISCOVERY
+    );
 
     List<String> discoverySearchTerms = generateDiscoverySearchTerms(context.targetEntity);
 
@@ -169,7 +172,10 @@ public with sharing class DeepWebResearchEngine {
   }
 
   private static ResearchStage executeDeepRelationshipStage(ResearchContext context) {
-    ResearchStage stage = new ResearchStage('Stage2', 'RRA_DeepWebResearch_Discovery');
+    ResearchStage stage = new ResearchStage(
+      'Stage2',
+      RRAPromptTemplates.DEEP_WEB_RESEARCH_DISCOVERY
+    );
 
     // Focus on top entities with multiple search angles per entity
     // TODO: select top entities by importance score instead of discovery order
@@ -248,7 +254,10 @@ public with sharing class DeepWebResearchEngine {
   }
 
   private static ResearchStage executeValidationSynthesisStage(ResearchContext context) {
-    ResearchStage stage = new ResearchStage('Stage3', 'RRA_DeepWebResearch_Refinement');
+    ResearchStage stage = new ResearchStage(
+      'Stage3',
+      RRAPromptTemplates.DEEP_WEB_RESEARCH_REFINEMENT
+    );
 
     // Aggregate all relationship data from previous stages
     String aggregatedRelationships = aggregateAllStageData(context);

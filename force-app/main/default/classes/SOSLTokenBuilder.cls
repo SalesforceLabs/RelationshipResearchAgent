@@ -1,11 +1,9 @@
 public class SOSLTokenBuilder {
-  public final static String PROMPT_TEMPLATE_NAME = 'RRA_CommonNameVariants';
-
   public static List<String> computeNameVariants(String name) {
     System.debug('Computing name variants for: ' + name);
     Map<String, Object> input = new Map<String, Object>{ 'Input:Name' => name };
     final List<Object> variants = EinsteinPromptService.promptListSafe(
-      SOSLTokenBuilder.PROMPT_TEMPLATE_NAME,
+      RRAPromptTemplates.COMMON_NAME_VARIANTS,
       input
     );
 

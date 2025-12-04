@@ -4,7 +4,7 @@ public class EntityMatcherTest {
   // variants
   private static EinsteinPromptService.MockExecutor setMockDataForMike() {
     EinsteinPromptService.MockExecutor exec = new EinsteinPromptService.MockExecutor();
-    exec.setResults(SOSLTokenBuilder.PROMPT_TEMPLATE_NAME, '["Mike","Michael"]');
+    exec.setResults(RRAPromptTemplates.COMMON_NAME_VARIANTS, '["Mike","Michael"]');
     EinsteinPromptService.setExecutorForTest(exec);
 
     // Seed simple graph (Account + two matching Contacts)
@@ -67,7 +67,7 @@ public class EntityMatcherTest {
       '  {"inputName":"bolt","confidenceScore":0}\n' +
       ']';
 
-    mock.setResults(EntityMatcher.PROMPT_TEMPLATE_NAME, resolvedJson);
+    mock.setResults(RRAPromptTemplates.COMMON_NAME_VARIANTS, resolvedJson);
 
     List<EntityMatcher.InputName> names = new List<EntityMatcher.InputName>{
       newInputName('mike'),
@@ -102,8 +102,7 @@ public class EntityMatcherTest {
   @IsTest
   public static void verifyMatchBatch() {
     EinsteinPromptService.MockExecutor mock = new EinsteinPromptService.MockExecutor();
-    mock.setResultsEmptyArray(EntityMatcher.PROMPT_TEMPLATE_NAME);
-    mock.setResultsEmptyArray(SOSLTokenBuilder.PROMPT_TEMPLATE_NAME);
+    mock.setResultsEmptyArray(RRAPromptTemplates.COMMON_NAME_VARIANTS);
     EinsteinPromptService.setExecutorForTest(mock);
 
     EntityMatcher.Processor p = new EntityMatcher.Processor();
@@ -138,8 +137,8 @@ public class EntityMatcherTest {
 
     // First call should be to the name-variants template
     System.assert(
-      mock.calls.get(0).promptId.equalsIgnoreCase(SOSLTokenBuilder.PROMPT_TEMPLATE_NAME),
-      'First prompt should resolve common_name_variants'
+      mock.calls.get(0).promptId.equalsIgnoreCase(RRAPromptTemplates.COMMON_NAME_VARIANTS),
+      'First prompt should resolve ' + RRAPromptTemplates.COMMON_NAME_VARIANTS
     );
 
     // Remaining calls should be to match_resolved_entities, and together
@@ -147,7 +146,7 @@ public class EntityMatcherTest {
     Integer matchedCount = 0;
     for (Integer c = 1; c < mock.calls.size(); c++) {
       System.assert(
-        mock.calls.get(c).promptId.equalsIgnoreCase(EntityMatcher.PROMPT_TEMPLATE_NAME),
+        mock.calls.get(c).promptId.equalsIgnoreCase(RRAPromptTemplates.COMMON_NAME_VARIANTS),
         'Subsequent prompts should be match_resolved_entities'
       );
 
