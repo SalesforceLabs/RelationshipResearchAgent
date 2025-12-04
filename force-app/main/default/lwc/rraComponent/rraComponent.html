@@ -68,6 +68,12 @@
             checked={useRecordContext}
             onchange={handleRecordContextToggle}
           ></lightning-input>
+          <lightning-combobox
+            label="Entity Matcher Mode"
+            options={entityMatcherModeOptions}
+            value={entityMatcherMode}
+            onchange={handleEntityMatcherModeChange}
+          ></lightning-combobox>
         </div>
 
         <lightning-accordion

@@ -36,18 +36,24 @@ public class EntityMatcherTest {
 
     // Case 1: simulate an error/empty-body from consolidation prompt, expecting
     //         null.
-    mock.setResults(EntityMatcher.PROMPT_TEMPLATE_NAME, null);
-    final EntityMatcher.MatchedEntity me = EntityMatcher.findMatchesSingle('mike');
+    mock.setResults(RRAPromptTemplates.COMMON_NAME_VARIANTS, null);
+    final EntityMatcher.MatchedEntity me = EntityMatcher.findMatchesSingle(
+      'mike',
+      EntityMatcher.EntityMatcherMode.DATACLOUD_AND_SOSL_FALLBACK
+    );
     Assert.isNotNull(me);
     Assert.isNull(me.matches);
 
     // Case 2: return proper consolidated JSON, expecting two matches back
     mock.setResults(
-      EntityMatcher.PROMPT_TEMPLATE_NAME,
+      RRAPromptTemplates.COMMON_NAME_VARIANTS,
       '[{"inputName":"mike","Id":"003SB00000lKdwbYAC","Name":"Michael Jones","confidenceScore":100},{"inputName":"mike","Id":"003SB00000lKduzYAC","Name":"Mike Jones","confidenceScore":80}]'
     );
 
-    EntityMatcher.MatchedEntity data = EntityMatcher.findMatchesSingle('mike');
+    EntityMatcher.MatchedEntity data = EntityMatcher.findMatchesSingle(
+      'mike',
+      EntityMatcher.EntityMatcherMode.DATACLOUD_AND_SOSL_FALLBACK
+    );
     Assert.isNotNull(data);
     Assert.areEqual(2, data.matches.size());
 

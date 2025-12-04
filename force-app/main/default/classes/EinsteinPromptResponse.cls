@@ -123,14 +123,24 @@ public with sharing class EinsteinPromptResponse {
 
     return new EinsteinPromptResponse(generationsOutput.generations[0]);
   }
+  public static EinsteinPromptResponse fromFlowInterview(Flow.Interview flowInterview) {
+    String responseText = (String) flowInterview.getVariableValue('responseText');
+    if (responseText == null || String.isBlank(responseText)) {
+      throw new PromptResponseException('No responseText variable found in the Flow Interview.');
+    }
+    return new EinsteinPromptResponse(responseText);
+  }
 
   public EinsteinPromptResponse(ConnectApi.EinsteinLLMGenerationItemOutput output) {
-    this.output = output;
+    this.outputText = output == null ? null : output.text;
+  }
+  public EinsteinPromptResponse(String responseText) {
+    this.outputText = responseText;
   }
 
   /** The raw text returned by the LLM (always present). */
   public String getText() {
-    return (output != null) ? output.text : null;
+    return outputText;
   }
 
   public Object getJson() {
@@ -139,8 +149,13 @@ public with sharing class EinsteinPromptResponse {
 
   public Object getJson(Type apexType) {
     if (!parsedJsonCache.containsKey(apexType)) {
-      Object parsed = parseJson(getText(), apexType);
-      parsedJsonCache.put(apexType, parsed);
+      String text = getText();
+      if (String.isBlank(text)) {
+        parsedJsonCache.put(apexType, null);
+      } else {
+        Object parsed = parseJson(text, apexType);
+        parsedJsonCache.put(apexType, parsed);
+      }
     }
 
     return parsedJsonCache.get(apexType);

@@ -1,11 +1,38 @@
 public with sharing class EntityMatcher {
-  // The following two constants are here due to an Apex limitation that
-  // prevents nested classes from having their own static properties.
-  // --
-  // The name of the prompt template used to resolve entities.
-  public final static String PROMPT_TEMPLATE_NAME = 'RRA_EntityMatcher';
   // Maximum number of matches to process in a single batch.
   public final static Integer MAX_MATCHES_BATCH = 500;
+
+  public enum EntityMatcherMode {
+    SOSL_ONLY, // SOSL search only
+    DATACLOUD_ONLY, // Datacloud only, error in DC aborts the process
+    DATACLOUD_AND_SOSL, // Datacloud then SOSL, error in DC aborts the process
+    DATACLOUD_AND_SOSL_FALLBACK, // Datacloud then SOSL, error in DC continues with SOSL
+    DATACLOUD_FALLBACK_SOSL // Datacloud only, unless error in DC -> continues with SOSL
+  }
+
+  public class EntityMatcherSettings implements CacheProvider.ValueProvider {
+    public EntityMatcherMode mode;
+
+    public EntityMatcherSettings() {
+      this.mode = EntityMatcherMode.DATACLOUD_AND_SOSL;
+    }
+
+    public EntityMatcherSettings(EntityMatcherMode mode) {
+      this.mode = mode;
+    }
+
+    public Object compute() {
+      return mode;
+    }
+
+    public Boolean restoreFromCache(Object cache) {
+      if (!(cache instanceof EntityMatcherMode)) {
+        return false;
+      }
+      this.mode = (EntityMatcherMode) cache;
+      return true;
+    }
+  }
 
   // A name is matched to an entity in database with the following steps:
   //
@@ -33,11 +60,11 @@ public with sharing class EntityMatcher {
   // records from JSON in RRARelationships into separate records in a table
   // designed specifically for names resolution (eg with name as the primary
   // key), and then use flow there. This is outside POC.
-  public class EntityInfo {
+  public class EntityInfo implements ICrmReferentialEntity {
     @InvocableVariable
-    public ID id;
+    public String id; // Can be entity id from SSOT, eg. "SFDC-12345"
     @InvocableVariable
-    public String objectTypeName;
+    public String objectTypeName; // API name, eg Account - do we need it?
     @InvocableVariable
     public String objectTypeLabel;
     @InvocableVariable
@@ -46,13 +73,54 @@ public with sharing class EntityMatcher {
     public String phone;
     @InvocableVariable
     public String email;
+    @InvocableVariable
+    public String accountId; // optional but if exists it's CRM ID
+    @InvocableVariable
+    public String contactId; // optional but if exists it's CRM ID
+    @InvocableVariable
+    public String note; // matching notes, if any
+    @InvocableVariable
+    public string description; // not necessarily matching, can contain additional data. from SSOT
+    @InvocableVariable
+    public string title;
+
+    // We have seen that DataCloud can return scores beyond 1.0, so we keep them as Double.
+    // I have not been able to locate documentation on score ranges.
+    // https://engineering.salesforce.com/how-data-cloud-hybrid-search-combines-keyword-and-vector-retrieval-to-elevate-the-search-experience/
+    // This article implies that the score is normalized, but in reality it can go beyond 1.0.
+    // The consumers should be careful as not to assume that the score is bounded with 1.0.
+    @InvocableVariable
+    public Double keywordSearchScore; // ranking metric from DataCloud, unbounded, may ignore name variants
+    @InvocableVariable
+    public Double confidenceScore; // from LLM, 0.0-1.0, considers name variants
+    public String getSobjectType() {
+      // This might need to be changed due to datacloud config. TBD.
+      // Currently, relying on prompts to return correct objectTypeName from DataCloud searches.
+      return objectTypeName;
+    }
+    public String getId() {
+      // Note that objects coming from DataCloud might have different ID.
+      return id;
+    }
+    public String getName() {
+      return name;
+    }
+    public String serialize() {
+      return JSON.serialize(this);
+    }
+    public string getAccountId() {
+      return accountId;
+    }
+    public string getContactId() {
+      return contactId;
+    }
   }
 
   public class EntityInfoMatch {
     @InvocableVariable
     public EntityInfo info;
     @InvocableVariable
-    public Integer confidence;
+    public Double confidence;
   }
 
   public class MatchedEntity {
@@ -70,8 +138,24 @@ public with sharing class EntityMatcher {
     public String name;
     public String phone;
     public String email;
-    public Integer confidenceScore;
+    public Double confidenceScore;
     public string inputName;
+  }
+
+  class DataCloudEntityJSON {
+    public String inputName; // input name that was searched for
+    public String entityId;
+    public String type;
+    public String name;
+    public String phone;
+    public String email;
+    public String accountId;
+    public String contactId;
+    public String note;
+    public String description;
+    public String title;
+    public Double keywordSearchScore;
+    public Double confidenceScore;
   }
 
   @TestVisible
@@ -80,6 +164,7 @@ public with sharing class EntityMatcher {
     private final List<MatchedEntity> listOfEntities = new List<MatchedEntity>();
     private final List<String> listOfNames = new List<String>();
     private final Map<String, MatchedEntity> termToEntityMap = new Map<String, MatchedEntity>();
+    public EntityMatcherSettings settings = new EntityMatcherSettings();
 
     private String normalizeName(String name) {
       return String.isBlank(name) ? null : name.trim();
@@ -116,8 +201,51 @@ public with sharing class EntityMatcher {
       termToEntityMap.put(key, entity);
     }
 
+    public ICrmReferentialEntity CrmContext { get; set; }
+
     public List<MatchedEntity> match() {
-      return match(findMatchesWithSosl(sosl));
+      List<EntityInfo> collectedEntities = new List<EntityInfo>();
+      if (settings.mode == EntityMatcherMode.SOSL_ONLY) {
+        collectMatchesWithSosl(sosl, collectedEntities);
+        return match(collectedEntities);
+      }
+      // DataCloud mode
+      try {
+        EntityMatcherDataCloud.collectMatchesWithDataCloud(
+          EntityMatcherDataCloud.getDataCloudSearchText(sosl, CrmContext),
+          collectedEntities
+        );
+        System.debug(
+          'DataCloud match for ' +
+            JSON.serialize(listOfNames) +
+            ': ' +
+            JSON.serialize(collectedEntities)
+        );
+        // continue to SOSL collection only when explicitly specified.
+        if (
+          settings.mode != EntityMatcherMode.DATACLOUD_AND_SOSL &&
+          settings.mode != EntityMatcherMode.DATACLOUD_AND_SOSL_FALLBACK
+        ) {
+          return match(collectedEntities);
+        }
+      } catch (Exception ex) {
+        // Data cloud search can fail for a variety of reasons, including
+        // permissions, misconfiguration, or service issues. We log the error
+        // and proceed with SOSL-based matching.
+        System.debug('DataCloud search failed: ' + ex.getMessage());
+        // rethrow only if no fallback is allowed.
+        if (
+          settings.mode != EntityMatcherMode.DATACLOUD_AND_SOSL_FALLBACK &&
+          settings.mode != EntityMatcherMode.DATACLOUD_FALLBACK_SOSL
+        ) {
+          throw ex;
+        }
+        // Note that `collectedEntities` is not necessarily empty here.
+      }
+
+      // Otherwise, combine with SOSL results.
+      collectMatchesWithSosl(sosl, collectedEntities);
+      return match(collectedEntities);
     }
 
     @TestVisible
@@ -138,9 +266,17 @@ public with sharing class EntityMatcher {
       };
 
       // Batch allMatches in fixed-size windows without mutating the input list
-      Integer total = allMatches == null ? 0 : allMatches.size();
-      if (total < 1) {
-        return listOfEntities;
+      Integer total = allMatches.size();
+
+      Map<String, EntityMatcher.MatchedEntity> termToEntityMap = new Map<String, EntityMatcher.MatchedEntity>();
+      for (EntityMatcher.MatchedEntity e : listOfEntities) {
+        termToEntityMap.put(getNormalizedKey(e.term), e);
+      }
+      Map<String, EntityInfo> idToEntityMap = new Map<String, EntityInfo>();
+      for (EntityInfo info : allMatches) {
+        if (!String.isBlank(info.id)) {
+          idToEntityMap.put(info.id, info);
+        }
       }
 
       for (Integer start = 0; start < total; start += MAX_MATCHES_BATCH) {
@@ -194,14 +330,21 @@ public with sharing class EntityMatcher {
             // matches found. we do not need to log this unless debugging.
             continue;
           }
-
-          EntityMatcher.EntityInfo info = new EntityMatcher.EntityInfo();
-          info.id = item.id;
+          EntityMatcher.EntityInfo info;
+          if (!idToEntityMap.containsKey(item.id)) {
+            System.debug('LLM returned entity ID that was not in the input: ' + item.id);
+            System.debug(JSON.serialize(item, true));
+            info = new EntityMatcher.EntityInfo();
+            info.id = item.id;
+          } else {
+            info = idToEntityMap.get(item.id).clone();
+          }
           info.objectTypeName = item.objectTypeName;
           info.objectTypeLabel = item.objectTypeLabel;
           info.name = item.name;
           info.phone = item.phone;
           info.email = item.email;
+          info.confidenceScore = item.confidenceScore;
 
           EntityMatcher.EntityInfoMatch match = new EntityMatcher.EntityInfoMatch();
           match.info = info;
@@ -278,14 +421,16 @@ public with sharing class EntityMatcher {
     return String.join(fields, separator);
   }
 
-  public static MatchedEntity findMatchesSingle(String name) {
+  public static MatchedEntity findMatchesSingle(String name, EntityMatcherMode entityMatcherMode) {
     Processor p = new Processor();
+    p.settings = new EntityMatcherSettings(entityMatcherMode);
     p.add(name);
     List<MatchedEntity> l = p.match();
     return (l == null || l.isEmpty()) ? null : l[0];
   }
 
   @InvocableMethod(label='Find matches in Salesforce')
+  // @AuraEnabled(cacheable=false)
   public static List<MatchedEntity> findMatchesMulti(List<InputName> names) {
     if (names == null) {
       return null;
@@ -308,14 +453,13 @@ public with sharing class EntityMatcher {
     return p.match();
   }
 
-  private static List<EntityInfo> findMatchesWithSosl(SOSLTokenBuilder collectSosl) {
+  private static void collectMatchesWithSosl(SOSLTokenBuilder collectSosl, List<EntityInfo> infos) {
     String soslTextQuery = collectSosl.collectedTokens;
     if (String.isBlank(soslTextQuery)) {
       System.debug('sosl query cannot be constructed');
-      return null;
+      return;
     }
 
-    List<EntityInfo> infos = new List<EntityInfo>();
     SchemaData schemaData = SchemaData.getCachedSchemaData();
 
     for (;;) {
@@ -351,7 +495,5 @@ public with sharing class EntityMatcher {
 
       soslTextQuery = collectSosl.collectedTokens;
     }
-
-    return infos;
   }
 }
