@@ -92,3 +92,9 @@
 .node-shell--focus ~ .node-label {
   font-weight: 600;
 }
+
+/* Graph canvas background */
+.d3 {
+  background-color: #f3f3f3;
+  border-radius: 8px;
+}
