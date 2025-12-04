@@ -11,3 +11,7 @@ manifest/**
 
 # LWC Jest
 **/__tests__/**
+
+# GenAI Prompt Templates with Data Cloud dependencies
+**/RRA_EntitiesDatacloudSearch.genAiPromptTemplate-meta.xml
+**/RRA_EntitiesDatacloudSearch.flow-meta.xml
