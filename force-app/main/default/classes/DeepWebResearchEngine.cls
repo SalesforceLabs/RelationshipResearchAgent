@@ -126,34 +126,28 @@ public with sharing class DeepWebResearchEngine {
         stageContext
       );
 
-      String searchResult = response.getText();
-      List<String> entitiesFromSearch = new List<String>();
+      // Use getJsonList() which handles conversational responses and extraction
+      List<Object> entityList = response.getJsonList();
 
-      if (String.isNotBlank(searchResult) && !searchResult.equals('[]')) {
-        // Deserialize once and reuse the parsed data
-        List<Object> entityList = (List<Object>) JSON.deserializeUntyped(searchResult);
+      if (entityList != null && !entityList.isEmpty()) {
+        allResults.add(JSON.serialize(entityList));
+        searchDiag.put('searchResults', entityList);
+        Integer entityCount = 0;
 
-        if (entityList != null && !entityList.isEmpty()) {
-          allResults.add(searchResult);
-          searchDiag.put('searchResults', entityList);
-
-          // Extract entity names directly from parsed data
-          Integer entityCount = 0;
-          for (Object entityObj : entityList) {
-            Map<String, Object> entityMap = (Map<String, Object>) entityObj;
-            String entityName = (String) entityMap.get('entityName');
-            if (String.isNotBlank(entityName)) {
-              allEntities.add(entityName);
-              entitiesFromSearch.add(entityName);
-              entityCount++;
-            }
+        // Extract entity names directly from parsed data
+        for (Object entityObj : entityList) {
+          Map<String, Object> entityMap = (Map<String, Object>) entityObj;
+          String entityName = (String) entityMap.get('entityName');
+          if (String.isNotBlank(entityName)) {
+            allEntities.add(entityName);
+            entityCount++;
           }
-          searchCount++;
-
-          System.debug(
-            'Discovery search "' + discoverySearchTerm + '" found ' + entityCount + ' entities'
-          );
         }
+        searchCount++;
+
+        System.debug(
+          'Discovery search "' + discoverySearchTerm + '" found ' + entityCount + ' entities'
+        );
       }
       searchIndex++;
     }
@@ -210,32 +204,25 @@ public with sharing class DeepWebResearchEngine {
         stageContext
       );
 
-      String searchResult = response.getText();
-      if (String.isNotBlank(searchResult) && !searchResult.equals('[]')) {
-        // Deserialize once and reuse the parsed data
-        List<Object> entityList = (List<Object>) JSON.deserializeUntyped(searchResult);
-
-        if (entityList != null && !entityList.isEmpty()) {
-          allResults.add(searchResult);
-          searchDiag.put('searchResults', entityList);
-
-          // Extract entity names directly from parsed data
-          Integer entityCount = 0;
-          for (Object entityObj : entityList) {
-            Map<String, Object> entityMap = (Map<String, Object>) entityObj;
-            String entityName = (String) entityMap.get('entityName');
-            if (String.isNotBlank(entityName)) {
-              allEntities.add(entityName);
-              entityCount++;
-            }
+      // Use getJsonList() which handles conversational responses and extraction
+      List<Object> entityList = response.getJsonList();
+      if (entityList != null && !entityList.isEmpty()) {
+        allResults.add(JSON.serialize(entityList));
+        searchDiag.put('searchResults', entityList);
+        // Extract entity names directly from parsed data
+        Integer entityCount = 0;
+        for (Object entityObj : entityList) {
+          Map<String, Object> entityMap = (Map<String, Object>) entityObj;
+          String entityName = (String) entityMap.get('entityName');
+          if (String.isNotBlank(entityName)) {
+            allEntities.add(entityName);
+            entityCount++;
           }
-
-          searchCount++;
-
-          System.debug(
-            'Deep relationship search "' + searchTerm + '" found ' + entityCount + ' entities'
-          );
         }
+        searchCount++;
+        System.debug(
+          'Deep relationship search "' + searchTerm + '" found ' + entityCount + ' entities'
+        );
       }
       searchIndex++;
     }
@@ -288,23 +275,34 @@ public with sharing class DeepWebResearchEngine {
       stageContext
     );
 
-    String refinedResult = response.getText();
-    if (String.isNotBlank(refinedResult) && !refinedResult.equals('[]')) {
-      stage.stageOutput = refinedResult;
-      Object refinedResultDeserialized = '';
-      try {
-        refinedResultDeserialized = JSON.deserializeUntyped(refinedResult);
-      } catch (Exception e) {
-        System.debug('Stage 3: Failed to parse JSON - ' + e.getMessage());
-      }
-      stage3Diag.put('refinedResults', refinedResultDeserialized);
-      System.debug('Stage 3: Successfully refined relationships');
-    } else {
+    // Use EinsteinPromptResponse.getJson() which handles conversational responses and extraction
+    Object refinedResultDeserialized = response.getJson();
+
+    // Guard 1: No JSON parsed - likely conversational response
+    if (refinedResultDeserialized == null) {
+      String rawText = response.getText();
+      System.debug(LoggingLevel.WARN, 'Stage 3: Failed to parse JSON from response: ' + rawText);
       stage.stageOutput = '[]';
-      stage3Diag.put('refinedResults', new List<Object>());
-      System.debug('Stage 3: No valid relationships after refinement');
+      stage3Diag.put('refinedResults', null);
+      return stage;
     }
 
+    // Guard 2: Non-list format returned
+    if (!(refinedResultDeserialized instanceof List<Object>)) {
+      System.debug(
+        LoggingLevel.ERROR,
+        'Stage 3: Refinement returned non-list format: ' + refinedResultDeserialized
+      );
+      stage.stageOutput = JSON.serialize(refinedResultDeserialized);
+      stage3Diag.put('refinedResults', refinedResultDeserialized);
+      return stage;
+    }
+
+    List<Object> refinedList = (List<Object>) refinedResultDeserialized;
+    // Store the clean JSON string for output
+    stage.stageOutput = JSON.serialize(refinedResultDeserialized);
+    stage3Diag.put('refinedResults', refinedList);
+    System.debug('Stage 3: ' + refinedList.size() + ' relationships');
     return stage;
   }
 
@@ -354,26 +352,6 @@ public with sharing class DeepWebResearchEngine {
     }
 
     return searchTerms;
-  }
-
-  private static List<String> extractEntitiesFromResponse(String responseText) {
-    List<String> entities = new List<String>();
-
-    try {
-      List<Object> entityList = (List<Object>) JSON.deserializeUntyped(responseText);
-
-      for (Object entityObj : entityList) {
-        Map<String, Object> entityMap = (Map<String, Object>) entityObj;
-        String entityName = (String) entityMap.get('entityName');
-        if (String.isNotBlank(entityName)) {
-          entities.add(entityName);
-        }
-      }
-    } catch (Exception e) {
-      System.debug('Failed to parse entities from response: ' + e.getMessage());
-    }
-
-    return entities;
   }
 
   /**
