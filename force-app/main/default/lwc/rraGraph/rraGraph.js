@@ -1,34 +1,49 @@
+/* global d3 */
+
 export class RraGraph {
   static BADGE_BACKGROUND_MIN_RADIUS = 6;
   static LINK_BADGE_SIZE = 12;
   static PLUS_BADGE_SIZE = 8;
+  static EDGE_ICON_SIZE = 12;
+  static EDGE_ICON_BG_RADIUS = 8;
 
   static defaultOptions = {
     // CSS selector or SVG element
     svg: "svg",
-    width: 500, // same w/h dimensions used by ERI1
-    height: 500,
+    width: 800,
+    height: 800,
 
     // Geometry
-    radius: 20, // base node radius
-    canvasMargin: 5, // px
+    radius: 20, // base node radius (for layout calculations)
+    shellHeight: 40, // height of node shells (rounded rectangles)
+    shellPadding: 12, // horizontal padding inside shells
+    shellIconTextGap: 8, // gap between icon and text
+    shellBorderRadius: 20, // border radius for shell corners
+    canvasMargin: 60, // margin from canvas edge
     startAngle: -Math.PI / 2, // start at 12 o'clock
-    textOffsetY: 10, // vertical offset for label under node from perimeter
+
+    // Force simulation settings
+    orbitRadius: 250, // target radius for first-degree nodes
+    minEdgeLength: 100, // minimum edge length to ensure icons are visible
+    shellGap: 30, // gap between adjacent node shells
 
     // Icon sprite (Salesforce symbols.svg)
-    //
     // Refer to README for instructions on how to obtain this asset.
     iconsUrl: "",
 
     iconSize: 22, // width/height of the <use> glyph
 
-    // Label sizing; used for layout calculations
-    maxLabelChars: 20, // higher hard cap than ERI1's; beyond this we add "…"
+    // Label sizing
+    maxLabelChars: 20,
+
+    // Zoom settings
+    minZoom: 0.3,
+    maxZoom: 3,
 
     onNodeClick: null // callback for node click events
   };
 
-  // Mapping beteen entity type and SLDS icon id.
+  // Mapping between entity type and SLDS icon id.
   static entityTypeToIconId = Object.freeze({
     organization: "account",
     person: "contact"
@@ -45,60 +60,23 @@ export class RraGraph {
   static DEFAULT_ENTITY_ICON = "entity";
 
   options = {};
+  simulation = null;
+  zoomBehavior = null;
+  currentTransform = null;
 
   constructor(options) {
     this.options = { ...RraGraph.defaultOptions, ...options };
+    this.currentTransform = d3.zoomIdentity;
   }
 
   clear() {
     const { svg } = this.options;
+    // Stop any running simulation
+    if (this.simulation) {
+      this.simulation.stop();
+      this.simulation = null;
+    }
     while (svg.firstChild) svg.removeChild(svg.firstChild);
-  }
-
-  // Compute a deterministic radial layout with the focus node at the center and all other nodes
-  // evenly spaced around a circle.  Mutates nodes to add x/y, returning a Map id->node for
-  // convenience.
-  _layout(nodes, { labelHalfWidth = 0, labelHeight = 0 } = {}) {
-    if (!nodes || nodes.length < 1) return new Map();
-
-    const { width, height, radius, canvasMargin, startAngle, textOffsetY } = this.options;
-
-    const cx = width / 2;
-    const cy = height / 2;
-
-    const focus = nodes.find((n) => n.isFocus) ?? nodes[0];
-    const related = nodes.filter((n) => n !== focus);
-    const N = related.length;
-
-    // Per-side padding that accounts for node size + label footprint
-    const padX = canvasMargin + Math.max(radius, labelHalfWidth);
-    const padLeft = padX;
-    const padRight = padX;
-
-    const padTop = canvasMargin + radius; // no label above
-    const padBottom = canvasMargin + radius + textOffsetY + labelHeight;
-
-    // Max allowed orbit radius so nothing crosses any side
-    const rXLeft = cx - padLeft;
-    const rXRight = width - cx - padRight;
-    const rYTop = cy - padTop;
-    const rYBottom = height - cy - padBottom;
-
-    const circleR = Math.max(radius * 3, Math.min(rXLeft, rXRight, rYTop, rYBottom));
-
-    if (focus) {
-      focus.x = cx;
-      focus.y = cy;
-    }
-
-    for (let i = 0; i < N; i++) {
-      const theta = startAngle + (2 * Math.PI * i) / Math.max(1, N);
-      const n = related[i];
-      n.x = cx + circleR * Math.cos(theta);
-      n.y = cy + circleR * Math.sin(theta);
-    }
-
-    return new Map(nodes.map((n) => [n.id, n]));
   }
 
   getIconIdForNode(d) {
@@ -111,8 +89,6 @@ export class RraGraph {
     return icon || RraGraph.DEFAULT_ENTITY_ICON;
   }
 
-  // CRM badge (e.g., link icon) to show in the corner if node has a CRM record and isn't the anchor
-  // node.
   getCrmBadgeIconId() {
     return "link";
   }
@@ -125,16 +101,147 @@ export class RraGraph {
     return `${this.options.iconsUtilUrl}#${icon}`;
   }
 
+  // Calculate node dimensions based on label text
+  _calculateNodeDimensions(svg, nodes, getLabelText) {
+    const { iconSize, shellPadding, shellIconTextGap, shellHeight } = this.options;
+
+    nodes.forEach((node) => {
+      const labelWidth = measureLabelMetrics(svg, [getLabelText(node)], {
+        labelClass: "node-label"
+      }).maxLabelWidth;
+      // Include badge button space for non-focus nodes (40px for button + spacing)
+      const badgeSpace = node.isFocus ? 0 : 40;
+      node.shellWidth =
+        shellPadding + iconSize + shellIconTextGap + labelWidth + shellPadding + badgeSpace;
+      node.shellHalfWidth = node.shellWidth / 2;
+      node.shellHalfHeight = shellHeight / 2;
+      // Collision radius for force simulation (use the larger dimension)
+      node.collisionRadius = Math.max(node.shellHalfWidth, node.shellHalfHeight) + 5;
+    });
+  }
+
+  // Compute initial positions for nodes in a radial layout
+  _initializePositions(nodes) {
+    const { width, height, startAngle, orbitRadius } = this.options;
+
+    const cx = width / 2;
+    const cy = height / 2;
+
+    const focus = nodes.find((n) => n.isFocus) ?? nodes[0];
+    const related = nodes.filter((n) => n !== focus);
+    const N = related.length;
+
+    // Place focus node at center
+    if (focus) {
+      focus.x = cx;
+      focus.y = cy;
+      focus.fx = cx; // Fix focus node position
+      focus.fy = cy;
+      focus.depth = 0;
+    }
+
+    // Calculate radius that ensures nodes don't overlap
+    const totalArcNeeded = related.reduce(
+      (sum, node) => sum + node.shellWidth + this.options.shellGap,
+      0
+    );
+    const radiusFromArc = totalArcNeeded / (2 * Math.PI);
+    const targetRadius = Math.max(orbitRadius, radiusFromArc, this.options.minEdgeLength);
+
+    // Initialize positions for related nodes
+    if (N > 0) {
+      related.forEach((node, i) => {
+        const theta = startAngle + (2 * Math.PI * i) / N;
+        node.x = cx + targetRadius * Math.cos(theta);
+        node.y = cy + targetRadius * Math.sin(theta);
+        node.depth = 1; // First-degree nodes
+        node.targetRadius = targetRadius;
+      });
+    }
+
+    return { targetRadius };
+  }
+
+  // Create D3 force simulation
+  _createSimulation(nodes, links, targetRadius) {
+    const { width, height } = this.options;
+    const cx = width / 2;
+    const cy = height / 2;
+
+    // Create simulation with forces
+    this.simulation = d3
+      .forceSimulation(nodes)
+      // Radial force: pull first-degree nodes to target orbit
+      .force(
+        "radial",
+        d3
+          .forceRadial((d) => (d.isFocus ? 0 : targetRadius), cx, cy)
+          .strength((d) => (d.isFocus ? 0 : 0.8))
+      )
+      // Collision force: prevent node overlaps
+      .force(
+        "collision",
+        d3.forceCollide().radius((d) => d.collisionRadius)
+      )
+      // Link force: maintain edge connections (optional, for stability)
+      .force(
+        "link",
+        d3
+          .forceLink(links)
+          .id((d) => d.id)
+          .distance(targetRadius)
+          .strength(0.1)
+      )
+      // Gentle repulsion between nodes
+      .force("charge", d3.forceManyBody().strength(-50))
+      .alphaDecay(0.05) // Slower decay for smoother settling
+      .velocityDecay(0.4);
+
+    return this.simulation;
+  }
+
+  // Set up zoom and pan behavior
+  _setupZoom(svg, rootGroup) {
+    const { minZoom, maxZoom } = this.options;
+
+    this.zoomBehavior = d3
+      .zoom()
+      .scaleExtent([minZoom, maxZoom])
+      .on("start", () => {
+        svg.style("cursor", "grabbing");
+      })
+      .on("zoom", (event) => {
+        this.currentTransform = event.transform;
+        rootGroup.attr("transform", event.transform);
+      })
+      .on("end", () => {
+        svg.style("cursor", "grab");
+      });
+
+    svg.call(this.zoomBehavior);
+
+    // Set initial grab cursor on canvas
+    svg.style("cursor", "grab");
+
+    // Double-click to reset zoom
+    svg.on("dblclick.zoom", () => {
+      svg.transition().duration(300).call(this.zoomBehavior.transform, d3.zoomIdentity);
+    });
+  }
+
   render(data) {
     const {
       svg: svgSelector,
       width,
       height,
-      radius,
       iconSize,
-      textOffsetY,
+      shellHeight,
+      shellPadding,
+      shellIconTextGap,
+      shellBorderRadius,
       maxLabelChars
     } = this.options;
+
     const svg = d3.select(svgSelector).attr("width", width).attr("height", height);
 
     const getLabelText = (d) => {
@@ -142,69 +249,112 @@ export class RraGraph {
       return t.length > maxLabelChars ? t.slice(0, maxLabelChars) + "…" : t;
     };
 
-    const labels = (data.nodes ?? []).map(getLabelText);
-    const { maxLabelWidth, labelHeight } = measureLabelMetrics(svg, labels, {
-      labelClass: "node-label"
-    });
+    // Calculate node dimensions
+    this._calculateNodeDimensions(svg, data.nodes, getLabelText);
 
-    const nodeById = this._layout(data.nodes, {
-      labelHalfWidth: maxLabelWidth / 2,
-      labelHeight
-    });
+    // Initialize positions
+    const { targetRadius } = this._initializePositions(data.nodes);
 
+    // Create node map for links
+    const nodeById = new Map(data.nodes.map((n) => [n.id, n]));
+
+    // Process links
     const links = (data.links || [])
       .map((link) => {
         const source = nodeById.get(link.source);
         const target = nodeById.get(link.target);
         if (!source || !target) {
-          console.warn("One or more unknown nodes in link", {
-            link,
-            source,
-            target
-          });
+          console.warn("Unknown nodes in link", { link, source, target });
           return null;
         }
         return { ...link, source, target };
       })
       .filter(Boolean);
 
-    svg
-      .append("g")
-      .attr("class", "links")
+    // Create root group for zoom/pan
+    const rootGroup = svg.append("g").attr("class", "graph-root");
+
+    // Set up zoom behavior
+    this._setupZoom(svg, rootGroup);
+
+    // Create simulation
+    const simulation = this._createSimulation(data.nodes, links, targetRadius);
+
+    // Render links
+    const linkGroup = rootGroup.append("g").attr("class", "links");
+
+    const linkLines = linkGroup
       .selectAll("line")
       .data(links)
       .enter()
       .append("line")
-      .attr("class", (d) => `link-line ${d.isCrmLink ? "link-crm" : "link-default"}`)
-      .attr("x1", (d) => d.source.x)
-      .attr("y1", (d) => d.source.y)
-      .attr("x2", (d) => d.target.x)
-      .attr("y2", (d) => d.target.y);
+      .attr("class", (d) => `link-line ${d.isCrmLink ? "link-crm" : "link-default"}`);
 
-    const g = svg
+    // Render edge badges (icons on edges)
+    const edgeBadgeGroup = rootGroup.append("g").attr("class", "edge-badges");
+
+    const edgeBadges = edgeBadgeGroup
+      .selectAll("g")
+      .data(links)
+      .enter()
       .append("g")
-      .attr("class", "nodes")
+      .attr("class", "edge-badge");
+
+    // White background circle for edge icon
+    edgeBadges
+      .append("circle")
+      .attr("r", RraGraph.EDGE_ICON_BG_RADIUS)
+      .attr("class", "edge-badge-bg");
+
+    // Icon for CRM links
+    edgeBadges
+      .filter((d) => d.isCrmLink)
+      .append("use")
+      .attr("href", this.getIconUtilUrl("salesforce1"))
+      .attr("width", RraGraph.EDGE_ICON_SIZE)
+      .attr("height", RraGraph.EDGE_ICON_SIZE)
+      .attr("x", -RraGraph.EDGE_ICON_SIZE / 2)
+      .attr("y", -RraGraph.EDGE_ICON_SIZE / 2)
+      .attr("class", "edge-icon edge-icon-crm");
+
+    // Icon for web links
+    edgeBadges
+      .filter((d) => !d.isCrmLink)
+      .append("use")
+      .attr("href", this.getIconUtilUrl("world"))
+      .attr("width", RraGraph.EDGE_ICON_SIZE)
+      .attr("height", RraGraph.EDGE_ICON_SIZE)
+      .attr("x", -RraGraph.EDGE_ICON_SIZE / 2)
+      .attr("y", -RraGraph.EDGE_ICON_SIZE / 2)
+      .attr("class", "edge-icon edge-icon-web");
+
+    // Render nodes
+    const nodeGroup = rootGroup.append("g").attr("class", "nodes");
+
+    const nodeElements = nodeGroup
       .selectAll("g")
       .data(data.nodes)
       .join("g")
-      .attr("transform", (d) => `translate(${d.x},${d.y})`)
-      .style("cursor", "pointer")
+      .attr("class", "node")
+      .style("cursor", "default")
       .on("click", (event, d) => {
         if (this.options.onNodeClick) {
           this.options.onNodeClick(d);
         }
       });
 
-    g.append("circle")
-      .attr("r", radius)
-      .attr("class", "node-shell")
-      .classed("node-shell--focus", (d) => !!d.isFocus);
-
-    // Inner ring for non-focus nodes
-    g.append("circle") //.filter((d) => !d.isFocus)
-      .attr("r", radius - 3)
+    // Node shell background (rounded rectangle)
+    nodeElements
+      .append("rect")
+      .attr("x", (d) => -d.shellHalfWidth)
+      .attr("y", (d) => -d.shellHalfHeight)
+      .attr("width", (d) => d.shellWidth)
+      .attr("height", shellHeight)
+      .attr("rx", shellBorderRadius)
+      .attr("ry", shellBorderRadius)
       .attr("class", (d) => {
-        const cl = ["node-inner"];
+        const cl = ["node-shell"];
+        if (d.isFocus) cl.push("node-shell--focus");
         if (d.isFocus || d.isCrmLink) {
           cl.push("node-crm");
           if (d.recordType) cl.push(`node-${d.recordType.toLowerCase()}`);
@@ -212,59 +362,121 @@ export class RraGraph {
         return cl.join(" ");
       });
 
-    // Centered Salesforce icon
-    // Note: we center by translating the <use> so its mid-point sits at 0,0.
-    g.append("use")
+    // Colored circle background for icon
+    nodeElements
+      .append("circle")
+      .attr("r", iconSize / 2)
+      .attr("cx", (d) => -d.shellHalfWidth + shellPadding + iconSize / 2)
+      .attr("cy", 0)
+      .attr("class", (d) => {
+        const cl = ["node-icon-bg"];
+        if (d.isFocus || d.isCrmLink) {
+          cl.push("node-icon-bg-crm");
+          if (d.recordType) cl.push(`node-icon-bg-${d.recordType.toLowerCase()}`);
+        }
+        return cl.join(" ");
+      });
+
+    // Icon on the left side of the shell
+    nodeElements
+      .append("use")
       .attr("href", (d) => this.getIconUrl(this.getIconIdForNode(d)))
       .attr("width", iconSize)
       .attr("height", iconSize)
-      .attr("x", -iconSize / 2)
+      .attr("x", (d) => -d.shellHalfWidth + shellPadding)
       .attr("y", -iconSize / 2)
       .attr("class", "node-icon");
 
-    // Badge overlay (bottom-right), shown for nodes that aren't the focus
-    const badgeG = g
+    // Text label - with help cursor for tooltip hint
+    nodeElements
+      .append("text")
+      .attr("class", "node-label")
+      .attr("x", (d) => -d.shellHalfWidth + shellPadding + iconSize + shellIconTextGap)
+      .attr("y", 0)
+      .attr("text-anchor", "start")
+      .attr("dominant-baseline", "central")
+      .style("pointer-events", "auto")
+      .style("cursor", "help")
+      .text((d) => getLabelText(d));
+
+    // Badge overlay for non-focus nodes
+    const badgeG = nodeElements
       .filter((d) => !d.isFocus)
       .append("g")
       .attr("class", "node-badge");
 
-    // Small white disc to keep badge legible
+    // White circle background for badge button - with pointer cursor
     badgeG
       .append("circle")
-      .attr("r", Math.max(RraGraph.BADGE_BACKGROUND_MIN_RADIUS, RraGraph.LINK_BADGE_SIZE / 2))
-      .attr("cx", radius * Math.cos(Math.PI / 4))
-      .attr("cy", radius * Math.sin(Math.PI / 4))
-      .attr("class", "node-badge-bg");
+      .attr("r", 14)
+      .attr("cx", (d) => d.shellHalfWidth - 20)
+      .attr("cy", 0)
+      .attr("class", "node-badge-bg")
+      .style("cursor", "pointer");
 
-    // Link badge glyph for CRM records
+    // Link badge icon for CRM records
     badgeG
       .filter((d) => d.recordId)
       .append("use")
       .attr("href", this.getIconUrl("link"))
-      .attr("width", RraGraph.LINK_BADGE_SIZE)
-      .attr("height", RraGraph.LINK_BADGE_SIZE)
-      .attr("x", radius * Math.cos(Math.PI / 4) - RraGraph.LINK_BADGE_SIZE / 2)
-      .attr("y", radius * Math.sin(Math.PI / 4) - RraGraph.LINK_BADGE_SIZE / 2);
+      .attr("width", 16)
+      .attr("height", 16)
+      .attr("x", (d) => d.shellHalfWidth - 20 - 8)
+      .attr("y", -8)
+      .attr("class", "node-badge-icon");
 
-    // Plus sign badge glyph for new records
+    // Plus sign badge icon for new records
     badgeG
       .filter((d) => !d.recordId)
       .append("use")
       .attr("href", this.getIconUtilUrl("add"))
-      .attr("width", RraGraph.PLUS_BADGE_SIZE)
-      .attr("height", RraGraph.PLUS_BADGE_SIZE)
-      .attr("x", radius * Math.cos(Math.PI / 4) - RraGraph.PLUS_BADGE_SIZE / 2)
-      .attr("y", radius * Math.sin(Math.PI / 4) - RraGraph.PLUS_BADGE_SIZE / 2);
+      .attr("width", 16)
+      .attr("height", 16)
+      .attr("x", (d) => d.shellHalfWidth - 20 - 8)
+      .attr("y", -8)
+      .attr("class", "node-badge-icon");
 
-    // Label under node
-    g.append("text")
-      .attr("class", "node-label")
-      .attr("y", radius + textOffsetY)
-      .attr("text-anchor", "middle")
-      .attr("dominant-baseline", "hanging")
-      .text((d) => getLabelText(d));
+    // Update positions on simulation tick
+    simulation.on("tick", () => {
+      // Update link positions
+      linkLines
+        .attr("x1", (d) => d.source.x)
+        .attr("y1", (d) => d.source.y)
+        .attr("x2", (d) => d.target.x)
+        .attr("y2", (d) => d.target.y);
 
-    this._setupTooltip(svg, g, radius);
+      // Update edge badge positions (midpoint of edge)
+      edgeBadges.attr("transform", (d) => {
+        const midX = (d.source.x + d.target.x) / 2;
+        const midY = (d.source.y + d.target.y) / 2;
+        return `translate(${midX},${midY})`;
+      });
+
+      // Update node positions
+      nodeElements.attr("transform", (d) => `translate(${d.x},${d.y})`);
+    });
+
+    // Run simulation for a bit then stop for static display
+    simulation.tick(150);
+    simulation.stop();
+
+    // Final position update
+    linkLines
+      .attr("x1", (d) => d.source.x)
+      .attr("y1", (d) => d.source.y)
+      .attr("x2", (d) => d.target.x)
+      .attr("y2", (d) => d.target.y);
+
+    edgeBadges.attr("transform", (d) => {
+      const midX = (d.source.x + d.target.x) / 2;
+      const midY = (d.source.y + d.target.y) / 2;
+      return `translate(${midX},${midY})`;
+    });
+
+    nodeElements.attr("transform", (d) => `translate(${d.x},${d.y})`);
+
+    // Set up tooltips on node labels
+    this._setupTooltip(nodeElements);
   }
 
   _truncateUrl(url, maxLength = 100) {
@@ -285,13 +497,12 @@ export class RraGraph {
     return content;
   }
 
-  _calculateTooltipPosition(svg, nodeData, nodeRadius) {
-    const svgElement = svg.node();
-    const svgRect = svgElement.getBoundingClientRect();
-
+  // Calculate tooltip position based on mouse event coordinates
+  _calculateTooltipPositionFromEvent(event) {
+    // Position tooltip slightly below and to the right of the cursor
     return {
-      x: svgRect.left + window.pageXOffset + nodeData.x + nodeRadius + 15,
-      y: svgRect.top + window.pageYOffset + nodeData.y - 10
+      x: event.pageX + 12,
+      y: event.pageY + 12
     };
   }
 
@@ -302,7 +513,7 @@ export class RraGraph {
       .attr("class", "rra-tooltip")
       .style("opacity", 0)
       .style("position", "absolute")
-      .style("background", "rgba(0, 0, 0, 0.8)")
+      .style("background", "rgba(0, 0, 0, 0.85)")
       .style("color", "white")
       .style("padding", "8px 12px")
       .style("border-radius", "4px")
@@ -310,88 +521,45 @@ export class RraGraph {
       .style("line-height", "1.4")
       .style("max-width", "300px")
       .style("word-wrap", "break-word")
-      .style("pointer-events", "auto")
-      .style("z-index", "9999");
+      .style("pointer-events", "none")
+      .style("z-index", "9999")
+      .style("transition", "opacity 0.1s ease-out");
   }
 
-  _setupTooltip(svg, nodeSelection, nodeRadius) {
+  _setupTooltip(nodeSelection) {
     const tooltip = this._createTooltip();
-    let hideTimeout = null;
-    let currentNodeId = null;
 
-    const SHOW_DURATION = 200;
-    const HIDE_DURATION = 250;
-    const MOUSEOUT_DELAY = 300;
-    const TOOLTIP_LEAVE_DELAY = 300;
-
-    const clearHideTimeout = () => {
-      if (hideTimeout) {
-        clearTimeout(hideTimeout);
-        hideTimeout = null;
-      }
-    };
-
-    const hideTooltip = () => {
-      tooltip
-        .transition()
-        .duration(HIDE_DURATION)
-        .style("opacity", 0)
-        .style("pointer-events", "none")
-        .on("end", () => {
-          currentNodeId = null;
-        });
-    };
-
-    nodeSelection.on("mouseover", (event, d) => {
-      clearHideTimeout();
-
+    // Show tooltip instantly at cursor position
+    const showTooltip = (event, d) => {
       const content = this._buildTooltipContent(d);
       tooltip.html(content);
 
-      // Position tooltip only if it's a different node
-      if (currentNodeId !== d.id) {
-        const position = this._calculateTooltipPosition(svg, d, nodeRadius);
-        tooltip.style("left", position.x + "px").style("top", position.y + "px");
-        currentNodeId = d.id;
-      }
-
+      const position = this._calculateTooltipPositionFromEvent(event);
       tooltip
-        .transition()
-        .duration(SHOW_DURATION)
-        .style("opacity", 0.9)
-        .style("pointer-events", "auto");
+        .style("left", position.x + "px")
+        .style("top", position.y + "px")
+        .style("opacity", 0.95);
+    };
+
+    // Hide tooltip instantly
+    const hideTooltip = () => {
+      tooltip.style("opacity", 0);
+    };
+
+    // Attach events to node labels specifically
+    nodeSelection.selectAll(".node-label").on("mouseenter", (event, d) => {
+      showTooltip(event, d);
     });
 
-    nodeSelection.on("mouseout", (event, d) => {
-      hideTimeout = setTimeout(() => {
-        const tooltipNode = tooltip.node();
-        const currentTarget = event.currentTarget;
-
-        const tooltipHovered = tooltipNode && tooltipNode.matches(":hover");
-        const nodeHovered = currentTarget && currentTarget.matches(":hover");
-
-        if (!tooltipHovered && !nodeHovered) {
-          hideTooltip();
-        }
-      }, MOUSEOUT_DELAY);
+    nodeSelection.selectAll(".node-label").on("mousemove", (event) => {
+      // Update position as cursor moves
+      const position = this._calculateTooltipPositionFromEvent(event);
+      tooltip.style("left", position.x + "px").style("top", position.y + "px");
     });
 
-    tooltip
-      .on("mouseover", () => {
-        // Only keep tooltip visible if it's currently visible (opacity > 0)
-        const currentOpacity = parseFloat(tooltip.style("opacity"));
-        if (currentOpacity > 0) {
-          clearHideTimeout();
-          tooltip.style("opacity", 0.9).style("pointer-events", "auto");
-        }
-      })
-      .on("mouseout", () => {
-        // Only set hide timeout if tooltip is currently visible
-        const currentOpacity = parseFloat(tooltip.style("opacity"));
-        if (currentOpacity > 0) {
-          hideTimeout = setTimeout(hideTooltip, TOOLTIP_LEAVE_DELAY);
-        }
-      });
+    nodeSelection.selectAll(".node-label").on("mouseleave", () => {
+      hideTooltip();
+    });
   }
 }
 
@@ -400,18 +568,13 @@ export class GraphDataBuilder {
 
   static _isValidAnchor(a) {
     if (!a || typeof a !== "object") return false;
-    // entityName is the minimal requirement; everything else is optional
     return !isBlank(a.entityName);
   }
 
   static _isValidRelated(r) {
     if (!r || typeof r !== "object") return false;
-
     if (isBlank(r.entityName)) return false;
     if (isBlank(r.predicate)) return false;
-    // Not requiring citation for now, though at some point we may want to show rel evidence.
-    // if (isBlank(r.citation)) return false;
-
     return true;
   }
 
@@ -421,7 +584,6 @@ export class GraphDataBuilder {
     if (!GraphDataBuilder._isValidAnchor(env.anchorEntity)) return false;
     if (!Array.isArray(env.relatedEntities)) return false;
 
-    // Must contain at least one valid related entity to render anything meaningful
     const hasValidRelated = env.relatedEntities.some(GraphDataBuilder._isValidRelated);
     if (!hasValidRelated) return false;
 
@@ -443,20 +605,16 @@ export class GraphDataBuilder {
 
     const { anchorEntity, relatedEntities } = this.envelope;
 
-    // Resolve anchor identity
     const anchorName = anchorEntity.entityName.trim();
     const anchorLabel = coalesce(anchorEntity.canonicalName, anchorName);
     const anchorRecordId = coalesce(recordId, anchorEntity.recordId);
     const anchorRecordType = coalesce(recordType, anchorEntity.recordType, "account");
-    const anchorEntityType = coalesce(
-      anchorEntity.entityType,
-      "organization" // the entity type equivalent of record type 'Account'
-    )?.toLowerCase();
+    const anchorEntityType = coalesce(anchorEntity.entityType, "organization")?.toLowerCase();
 
     const nodes = {};
     const links = {};
 
-    // Add special focus (anchor) node
+    // Add focus (anchor) node
     nodes[anchorName] = {
       id: anchorName,
       label: anchorLabel,
@@ -467,7 +625,7 @@ export class GraphDataBuilder {
       recordType: anchorRecordType
     };
 
-    // Add related entities and one link per unique pair (limit to top 8 valid entities)
+    // Add related entities (limit to top 8)
     const maxNodes = 8;
     let nodeCount = 0;
     for (const rel of relatedEntities) {
@@ -483,10 +641,9 @@ export class GraphDataBuilder {
       const otherName = rel.entityName.trim();
       if (!otherName) {
         console.warn("Skipping relationship with blank entityName", rel);
+        continue;
       }
 
-      // TODO: do better than simply checking for name equality here; at the very least, also
-      // consider record ids/types.  Skipping for now.
       if (otherName === anchorName) {
         console.warn(`Skipping self-referential relationship for ${anchorName}`, rel);
         continue;
@@ -514,12 +671,13 @@ export class GraphDataBuilder {
         uuid: rel.uuid || undefined,
         context: rel.context || undefined,
         citation: rel.citation || undefined,
-        citationURL: rel.citationURL || undefined
+        citationURL: rel.citationURL || undefined,
+        // Future support: depth indicates relationship degree (1 = first-degree, 2 = second-degree, etc.)
+        depth: 1
       };
 
       const pairKey = GraphDataBuilder.keyForPair(anchorName, otherName);
       if (links[pairKey]) {
-        // Shouldn't happen due to the earlier check on node
         console.warn(`Duplicate relationship for pair ${pairKey}, skipping`, rel);
         continue;
       }
@@ -540,11 +698,8 @@ export class GraphDataBuilder {
   }
 }
 
-// Measure text dimensions by rendering offscreen in an SVG element.
-// Assumes that web fonts have loaded and CSS is applied.
-// Returns { maxLabelWidth, labelHeight } based on actual text rendering.
+// Measure text dimensions by rendering offscreen in an SVG element
 function measureLabelMetrics(svg, labels, { labelClass = "node-label" } = {}) {
-  // Create a temporary <text> that inherits the same CSS as your labels
   const meas = svg
     .append("text")
     .attr("class", labelClass)
@@ -554,11 +709,9 @@ function measureLabelMetrics(svg, labels, { labelClass = "node-label" } = {}) {
 
   let maxLabelWidth = 0;
 
-  // Height can be measured with any representative string
   meas.text("Ag");
   const labelHeight = meas.node().getBBox().height;
 
-  // Compute max width across the actual labels that will be displayed
   for (const t of labels) {
     meas.text(t);
     const w = meas.node().getComputedTextLength();
@@ -572,9 +725,8 @@ function measureLabelMetrics(svg, labels, { labelClass = "node-label" } = {}) {
 function isBlank(v) {
   if (typeof v === "string") {
     return v.trim().length < 1;
-  } else {
-    return true;
   }
+  return true;
 }
 
 function coalesce(...v) {

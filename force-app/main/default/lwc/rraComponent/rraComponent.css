@@ -10,33 +10,54 @@
   stroke-dasharray: 4 2;
 }
 
-/* Nodes */
+.edge-badge-bg {
+  fill: #ffffff;
+  stroke: #d0d0d0;
+  stroke-width: 1;
+}
+
+.edge-icon {
+  pointer-events: none;
+  fill: #5c5c5c;
+}
+
+/* Node shells */
 .node-shell {
   fill: #ffffff;
   stroke: #c9c9c9;
-  stroke-width: 2;
+  stroke-width: 1.5;
 }
 .node-shell--focus {
-  /* Using the following styling previously:
-     stroke: #0176d3;
-     stroke-width: 7; */
+  stroke: #c9c9c9;
+  stroke-width: 1.5;
 }
 
-.node-inner {
-  /* Using the following styling previously:
-     stroke: #e5e5e5;
-     stroke-width: 1.5; */
-  fill: #969492;
-}
+/* All nodes have white background - no special colors for CRM types */
 .node-crm {
   /* purposely left blank */
 }
 .node-contact,
 .node-lead {
-  fill: #9602c8;
+  /* removed colored fill - all nodes are white */
 }
 .node-account,
 .node-opportunity {
+  /* removed colored fill - all nodes are white */
+}
+
+/* Colored circular backgrounds for icons */
+.node-icon-bg {
+  fill: #969492;
+}
+.node-icon-bg-crm {
+  /* purposely left blank - will be overridden by specific types */
+}
+.node-icon-bg-contact,
+.node-icon-bg-lead {
+  fill: #9602c8;
+}
+.node-icon-bg-account,
+.node-icon-bg-opportunity {
   fill: #5867e8;
 }
 
@@ -45,18 +66,35 @@
   fill: #ffffff;
 }
 
-/* CRM badge background disc */
+/* Badge button on right side of shell */
 .node-badge-bg {
   fill: #ffffff;
-  stroke: #d0d0d0;
+  stroke: #5c5c5c;
   stroke-width: 1;
+  cursor: pointer;
 }
 
-/* Labels */
+.node-badge-icon {
+  pointer-events: none;
+  fill: #0250d9;
+}
+
+/* Labels inside shells */
 .node-label {
-  fill: #2e2e2e; /* matches previous inline JS color */
-  font-size: 13px;
-  font-family: Calibri, Arial, sans-serif;
-  text-anchor: middle;
-  dominant-baseline: hanging;
+  fill: #03234d;
+  font-size: 14px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+  font-weight: 500;
+  pointer-events: auto;
+}
+
+/* Semibold text for focus node (center/searched entity) */
+.node-shell--focus ~ .node-label {
+  font-weight: 600;
+}
+
+/* Graph canvas background */
+.d3 {
+  background-color: #f3f3f3;
+  border-radius: 8px;
 }
