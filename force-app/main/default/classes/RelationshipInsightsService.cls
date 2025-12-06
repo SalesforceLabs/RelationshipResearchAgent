@@ -15,7 +15,7 @@ public with sharing class RelationshipInsightsService {
       options.parseEntityMatcherMode()
     );
 
-    if (!options.isNewResearch) {
+    if (options.appendToExistingResearch) {
       webInsights = appendWebInsights(targetEntity, webInsights, rraRecord);
     }
 
