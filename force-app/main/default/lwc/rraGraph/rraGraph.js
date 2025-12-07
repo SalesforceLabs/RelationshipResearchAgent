@@ -263,135 +263,6 @@ export class RraGraph {
       .attr("text-anchor", "middle")
       .attr("dominant-baseline", "hanging")
       .text((d) => getLabelText(d));
-
-    this._setupTooltip(svg, g, radius);
-  }
-
-  _truncateUrl(url, maxLength = 100) {
-    if (url.length <= maxLength) {
-      return url;
-    }
-    return url.substring(0, maxLength - 3) + "...";
-  }
-
-  _buildTooltipContent(nodeData) {
-    let content = nodeData.context ?? nodeData.label ?? nodeData.id;
-
-    if (nodeData.citationURL) {
-      const displayUrl = this._truncateUrl(nodeData.citationURL);
-      content += `<br><br><a href="${nodeData.citationURL}" target="_blank" style="color: #87CEEB; text-decoration: underline;">[Source] ${displayUrl}</a>`;
-    }
-
-    return content;
-  }
-
-  _calculateTooltipPosition(svg, nodeData, nodeRadius) {
-    const svgElement = svg.node();
-    const svgRect = svgElement.getBoundingClientRect();
-
-    return {
-      x: svgRect.left + window.pageXOffset + nodeData.x + nodeRadius + 15,
-      y: svgRect.top + window.pageYOffset + nodeData.y - 10
-    };
-  }
-
-  _createTooltip() {
-    return d3
-      .select("body")
-      .append("div")
-      .attr("class", "rra-tooltip")
-      .style("opacity", 0)
-      .style("position", "absolute")
-      .style("background", "rgba(0, 0, 0, 0.8)")
-      .style("color", "white")
-      .style("padding", "8px 12px")
-      .style("border-radius", "4px")
-      .style("font-size", "12px")
-      .style("line-height", "1.4")
-      .style("max-width", "300px")
-      .style("word-wrap", "break-word")
-      .style("pointer-events", "auto")
-      .style("z-index", "9999");
-  }
-
-  _setupTooltip(svg, nodeSelection, nodeRadius) {
-    const tooltip = this._createTooltip();
-    let hideTimeout = null;
-    let currentNodeId = null;
-
-    const SHOW_DURATION = 200;
-    const HIDE_DURATION = 250;
-    const MOUSEOUT_DELAY = 300;
-    const TOOLTIP_LEAVE_DELAY = 300;
-
-    const clearHideTimeout = () => {
-      if (hideTimeout) {
-        clearTimeout(hideTimeout);
-        hideTimeout = null;
-      }
-    };
-
-    const hideTooltip = () => {
-      tooltip
-        .transition()
-        .duration(HIDE_DURATION)
-        .style("opacity", 0)
-        .style("pointer-events", "none")
-        .on("end", () => {
-          currentNodeId = null;
-        });
-    };
-
-    nodeSelection.on("mouseover", (event, d) => {
-      clearHideTimeout();
-
-      const content = this._buildTooltipContent(d);
-      tooltip.html(content);
-
-      // Position tooltip only if it's a different node
-      if (currentNodeId !== d.id) {
-        const position = this._calculateTooltipPosition(svg, d, nodeRadius);
-        tooltip.style("left", position.x + "px").style("top", position.y + "px");
-        currentNodeId = d.id;
-      }
-
-      tooltip
-        .transition()
-        .duration(SHOW_DURATION)
-        .style("opacity", 0.9)
-        .style("pointer-events", "auto");
-    });
-
-    nodeSelection.on("mouseout", (event, d) => {
-      hideTimeout = setTimeout(() => {
-        const tooltipNode = tooltip.node();
-        const currentTarget = event.currentTarget;
-
-        const tooltipHovered = tooltipNode && tooltipNode.matches(":hover");
-        const nodeHovered = currentTarget && currentTarget.matches(":hover");
-
-        if (!tooltipHovered && !nodeHovered) {
-          hideTooltip();
-        }
-      }, MOUSEOUT_DELAY);
-    });
-
-    tooltip
-      .on("mouseover", () => {
-        // Only keep tooltip visible if it's currently visible (opacity > 0)
-        const currentOpacity = parseFloat(tooltip.style("opacity"));
-        if (currentOpacity > 0) {
-          clearHideTimeout();
-          tooltip.style("opacity", 0.9).style("pointer-events", "auto");
-        }
-      })
-      .on("mouseout", () => {
-        // Only set hide timeout if tooltip is currently visible
-        const currentOpacity = parseFloat(tooltip.style("opacity"));
-        if (currentOpacity > 0) {
-          hideTimeout = setTimeout(hideTooltip, TOOLTIP_LEAVE_DELAY);
-        }
-      });
   }
 }
 
@@ -469,6 +340,7 @@ export class GraphDataBuilder {
 
     // Add related entities and one link per unique pair (limit to top 8 valid entities)
     const maxNodes = 8;
+    const strongInfluencerThreshold = 3;
     let nodeCount = 0;
     for (const rel of relatedEntities) {
       if (!GraphDataBuilder._isValidRelated(rel)) {
@@ -485,8 +357,6 @@ export class GraphDataBuilder {
         console.warn("Skipping relationship with blank entityName", rel);
       }
 
-      // TODO: do better than simply checking for name equality here; at the very least, also
-      // consider record ids/types.  Skipping for now.
       if (otherName === anchorName) {
         console.warn(`Skipping self-referential relationship for ${anchorName}`, rel);
         continue;
@@ -500,6 +370,7 @@ export class GraphDataBuilder {
       const label = coalesce(rel.canonicalName, otherName);
       const entityType = coalesce(rel.entityType, "organization");
       const isCrmLink = rel.source === "crm" || rel.isCrmConfirmed;
+      const isStrongInfluencer = nodeCount < strongInfluencerThreshold;
 
       nodes[otherName] = {
         id: otherName,
@@ -514,12 +385,12 @@ export class GraphDataBuilder {
         uuid: rel.uuid || undefined,
         context: rel.context || undefined,
         citation: rel.citation || undefined,
-        citationURL: rel.citationURL || undefined
+        citationURL: rel.citationURL || undefined,
+        strongInfluencer: isStrongInfluencer
       };
 
       const pairKey = GraphDataBuilder.keyForPair(anchorName, otherName);
       if (links[pairKey]) {
-        // Shouldn't happen due to the earlier check on node
         console.warn(`Duplicate relationship for pair ${pairKey}, skipping`, rel);
         continue;
       }

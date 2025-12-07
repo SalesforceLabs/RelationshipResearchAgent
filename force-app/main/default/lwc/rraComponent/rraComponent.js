@@ -59,10 +59,10 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
     { label: "Datacloud, Fallback on SOSL", value: "DATACLOUD_FALLBACK_SOSL" }
   ];
 
-  // modal form behavior
   showCreateRecordModal = false;
   showConfirmMatchModal = false;
   selectedNodeData = {};
+  showSidePanel = false;
 
   // Platform Event subscription
   subscription = {};
@@ -445,31 +445,15 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
   // handlers
 
   async handleNodeClick(nodeData) {
-    if (nodeData.recordId) {
-      if (nodeData.source === "web" && !nodeData.isCrmConfirmed) {
-        this.selectedNodeData = {
-          ...nodeData,
-          titlecaseRecordType: RraComponent.RECORD_TYPE_TITLECASE[nodeData.recordType] || ""
-        };
-        this.showConfirmMatchModal = true;
-      } else {
-        const recordUrl = await this[NavigationMixin.GenerateUrl]({
-          type: "standard__recordPage",
-          attributes: {
-            recordId: nodeData.recordId,
-            objectApiName: nodeData.recordType,
-            actionName: "view"
-          }
-        });
-        window.open(recordUrl, "_blank");
-      }
-    } else {
-      this.selectedNodeData = {
-        ...nodeData,
-        titlecaseRecordType: RraComponent.RECORD_TYPE_TITLECASE[nodeData.recordType] || ""
-      };
-      this.showCreateRecordModal = true;
+    if (nodeData.isFocus) {
+      return;
     }
+
+    this.selectedNodeData = {
+      ...nodeData,
+      titlecaseRecordType: RraComponent.RECORD_TYPE_TITLECASE[nodeData.recordType] || ""
+    };
+    this.showSidePanel = true;
   }
 
   handleCloseCreateRecordModal() {
@@ -486,6 +470,37 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
     if (modal) {
       modal.reset();
     }
+  }
+
+  handleCloseSidePanel() {
+    this.showSidePanel = false;
+  }
+
+  async handleSidePanelViewRecord(event) {
+    const { nodeData } = event.detail;
+    const recordUrl = await this[NavigationMixin.GenerateUrl]({
+      type: "standard__recordPage",
+      attributes: {
+        recordId: nodeData.recordId,
+        objectApiName: nodeData.recordType,
+        actionName: "view"
+      }
+    });
+    window.open(recordUrl, "_blank");
+  }
+
+  handleSidePanelConfirmMatch(event) {
+    const { nodeData } = event.detail;
+    this.showSidePanel = false;
+    this.selectedNodeData = nodeData;
+    this.showConfirmMatchModal = true;
+  }
+
+  handleSidePanelCreateRecord(event) {
+    const { nodeData } = event.detail;
+    this.showSidePanel = false;
+    this.selectedNodeData = nodeData;
+    this.showCreateRecordModal = true;
   }
 
   async handleConfirmMatch(event) {
