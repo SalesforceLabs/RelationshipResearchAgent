@@ -2,8 +2,9 @@ import { track, LightningElement, api, wire } from "lwc";
 import { ShowToastEvent } from "lightning/platformShowToastEvent";
 import { loadScript } from "lightning/platformResourceLoader";
 import { CurrentPageReference, NavigationMixin } from "lightning/navigation";
+import { subscribe, unsubscribe, onError } from "lightning/empApi";
+import { refreshApex } from "@salesforce/apex";
 import getRelationships from "@salesforce/apex/RRAClient.getRelationships";
-import createRelationships from "@salesforce/apex/RRAClient.createRelationships";
 import createRelationshipsAsync from "@salesforce/apex/RRAClientAsync.createRelationshipsAsync";
 import confirmCrmMatch from "@salesforce/apex/RRAClient.confirmCrmMatch";
 
@@ -45,9 +46,10 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
   isLoading = true;
 
   // UI checkbox options - defaults
-  useAsyncExecution = true;
+  appendToExistingResearch = false;
   useDeepWebSearch = true;
   useRecordContext = true;
+  generateSyntheticData = false;
   entityMatcherMode = "SOSL_ONLY";
   entityMatcherModeOptions = [
     { label: "SOSL Only", value: "SOSL_ONLY" },
@@ -62,11 +64,23 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
   showConfirmMatchModal = false;
   selectedNodeData = {};
 
+  // Platform Event subscription
+  subscription = {};
+  channelName = "/event/RRA_Job_Complete__e";
+  isResearchInProgress = false;
+
+  // Store wire result for refresh
+  wiredRelationshipsResult;
+
   @wire(CurrentPageReference)
   currentPageReference;
 
+  wiredDataExists(data) {
+    return typeof data === "string" && data.length > 0;
+  }
+
   loadRelationships(data) {
-    if (data === undefined || data === null || typeof data !== "string" || data.length < 1) {
+    if (!this.wiredDataExists(data)) {
       console.log("loadRelationships() called with empty data");
       return;
     }
@@ -107,57 +121,33 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
       recordId: this.recordId,
       recordType: this.objectApiName
     });
+    this.graphRendered = false;
   }
 
-  async updateRelationships({ isNewResearch = true }) {
-    if (this.useAsyncExecution) {
-      const result = await createRelationshipsAsync({
-        recordId: this.recordId,
-        options: {
-          useDeepWebSearch: this.useDeepWebSearch,
-          useRecordContext: this.useRecordContext,
-          isNewResearch: isNewResearch,
-          entityMatcherMode: this.entityMatcherMode
-        }
-      });
+  async updateRelationships() {
+    const result = await createRelationshipsAsync({
+      recordId: this.recordId,
+      optionsJson: this.wireOptionsJson
+    });
 
-      const jobInfo = JSON.parse(result);
+    const jobInfo = JSON.parse(result);
 
-      if (jobInfo.status === "ALREADY_QUEUED") {
-        this.dispatchEvent(
-          new ShowToastEvent({
-            title: "Job Already Running",
-            message: `A job is already processing for this record (ID: ${jobInfo.jobId})`,
-            variant: "warning"
-          })
-        );
-      } else {
-        this.dispatchEvent(
-          new ShowToastEvent({
-            title: "Job Queued",
-            message: `Relationships job queued (ID: ${jobInfo.jobId}). Check back later for results.`,
-            variant: "info"
-          })
-        );
-      }
-    } else {
-      const data = await createRelationships({
-        recordId: this.recordId,
-        options: {
-          useDeepWebSearch: this.useDeepWebSearch,
-          useRecordContext: this.useRecordContext,
-          isNewResearch: isNewResearch,
-          entityMatcherMode: this.entityMatcherMode
-        }
-      });
-      this.loadRelationships(data);
-      this.graphRendered = false;
-
+    if (jobInfo.status === "ALREADY_QUEUED") {
       this.dispatchEvent(
         new ShowToastEvent({
-          title: "Success",
-          message: "Relationships successfully generated",
-          variant: "success"
+          title: "Research In Progress",
+          message:
+            "Research is already running for this record. Results will refresh automatically when complete.",
+          variant: "warning"
+        })
+      );
+    } else {
+      this.dispatchEvent(
+        new ShowToastEvent({
+          title: "Research Started",
+          message:
+            "Your research is in progress. Results will refresh automatically when complete.",
+          variant: "info"
         })
       );
     }
@@ -205,9 +195,38 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
   // instance variables are reactive and will trigger new renders/callbacks
   // wire callbacks will be interleaved with the the above based on completion timing
 
+  get wireOptions() {
+    return {
+      generateSyntheticData: this.generateSyntheticData,
+      useDeepWebSearch: this.useDeepWebSearch,
+      useRecordContext: this.useRecordContext,
+      entityMatcherMode: this.entityMatcherMode,
+      appendToExistingResearch: this.appendToExistingResearch
+    };
+  }
+
+  // Wire params do not support rich data types so must use string
+  get wireOptionsJson() {
+    return JSON.stringify(this.wireOptions);
+  }
+
   @wire(getRelationships, { recordId: "$recordId" })
   getWiredRelationships(result) {
-    console.log("[RraComponent] getWiredRelationships start");
+    console.log(
+      "[RraComponent] getWiredRelationships start",
+      JSON.stringify({
+        recordId: this.recordId,
+        hasData: !!result.data,
+        hasError: !!result.error,
+        dataLength: result.data?.length,
+        errorMessage: result.error?.body?.message,
+        graphRendered: this.graphRendered,
+        isLoading: this.isLoading
+      })
+    );
+
+    // Store the result for later refresh
+    this.wiredRelationshipsResult = result;
 
     const { data, error } = result;
 
@@ -217,10 +236,8 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
       return;
     }
 
-    // LWC runtime will send empty data on initial wired call, then api data once it completes
-    this.loadRelationships(data);
-
-    if (data != null && typeof data === "string" && data.length > 0) {
+    if (this.wiredDataExists(data)) {
+      this.loadRelationships(data);
       this.isLoading = false;
     }
 
@@ -230,37 +247,159 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
   constructor() {
     console.log("[RraComponent] constructor start");
     super();
-    console.log("[RraComponent] constructor end");
+    console.log(
+      "[RraComponent] constructor end",
+      JSON.stringify({
+        recordId: this.recordId,
+        graphRendered: this.graphRendered,
+        isLoading: this.isLoading
+      })
+    );
   }
 
   connectedCallback() {
-    console.log("[RraComponent] connectedCallback start");
+    console.log(
+      "[RraComponent] connectedCallback start",
+      JSON.stringify({
+        recordId: this.recordId,
+        graphRendered: this.graphRendered,
+        isLoading: this.isLoading
+      })
+    );
 
     // Load persisted checkbox values from localStorage (localized to this record)
     if (this.recordId) {
-      const savedAsync = localStorage.getItem(`rra_${this.recordId}_useAsyncExecution`);
+      const savedAppendToExistingResearch = localStorage.getItem(
+        `rra_${this.recordId}_appendToExistingResearch`
+      );
       const savedDeepWeb = localStorage.getItem(`rra_${this.recordId}_useDeepWebSearch`);
       const savedRecordContext = localStorage.getItem(`rra_${this.recordId}_useRecordContext`);
+      const savedGenerateSyntheticData = localStorage.getItem(
+        `rra_${this.recordId}_generateSyntheticData`
+      );
       const entityMatcherMode = localStorage.getItem(`rra_${this.recordId}_entityMatcherMode`);
 
-      if (savedAsync !== null) this.useAsyncExecution = savedAsync === "true";
+      if (savedAppendToExistingResearch !== null)
+        this.appendToExistingResearch = savedAppendToExistingResearch === "true";
       if (savedDeepWeb !== null) this.useDeepWebSearch = savedDeepWeb === "true";
       if (savedRecordContext !== null) this.useRecordContext = savedRecordContext === "true";
+      if (savedGenerateSyntheticData !== null)
+        this.generateSyntheticData = savedGenerateSyntheticData === "true";
       if (entityMatcherMode !== null) this.entityMatcherMode = entityMatcherMode;
     }
 
-    console.log("[RraComponent] connectedCallback end");
+    // Subscribe to Platform Events
+    this.handleSubscribe();
+    this.registerErrorListener();
+
+    console.log(
+      "[RraComponent] connectedCallback end",
+      JSON.stringify({
+        recordId: this.recordId,
+        graphRendered: this.graphRendered,
+        isLoading: this.isLoading
+      })
+    );
+  }
+
+  disconnectedCallback() {
+    console.log(
+      "[RraComponent] disconnectedCallback start",
+      JSON.stringify({
+        recordId: this.recordId
+      })
+    );
+    this.handleUnsubscribe();
+    console.log(
+      "[RraComponent] disconnectedCallback end",
+      JSON.stringify({
+        recordId: this.recordId
+      })
+    );
+  }
+
+  handlePlatformEvent(response) {
+    console.log("Received Platform Event:", JSON.stringify(response));
+
+    const payload = response.data.payload;
+
+    if (payload.RecordId__c === this.recordId) {
+      console.log("Job completed for current record");
+      this.isResearchInProgress = false;
+
+      if (payload.Status__c === "Success") {
+        // Refresh the wired data, which will trigger getWiredRelationships and new graph render
+        refreshApex(this.wiredRelationshipsResult).then(() => {
+          this.dispatchEvent(
+            new ShowToastEvent({
+              title: "Research Complete",
+              message: "Relationship insights have been updated",
+              variant: "success"
+            })
+          );
+        });
+      } else {
+        this.dispatchEvent(
+          new ShowToastEvent({
+            title: "Research Failed",
+            message: "An error occurred during research. Please try again.",
+            variant: "error"
+          })
+        );
+      }
+    }
+  }
+
+  handleSubscribe() {
+    subscribe(this.channelName, -1, this.handlePlatformEvent.bind(this))
+      .then((response) => {
+        console.log("Successfully subscribed to channel:", response.channel);
+        this.subscription = response;
+      })
+      .catch((error) => {
+        console.error("Error subscribing to Platform Event:", error);
+      });
+  }
+
+  handleUnsubscribe() {
+    unsubscribe(this.subscription, (response) => {
+      console.log("Unsubscribed from channel:", response);
+    });
+  }
+
+  registerErrorListener() {
+    onError((error) => {
+      console.error("Streaming API error:", JSON.stringify(error));
+    });
   }
 
   async renderedCallback() {
-    console.log("[RraComponent] renderedCallback start");
+    console.log(
+      "[RraComponent] renderedCallback start",
+      JSON.stringify({
+        recordId: this.recordId,
+        graphRendered: this.graphRendered,
+        hasGraphData: this.graphData != null,
+        graphDataNodeCount: this.graphData?.nodes?.length,
+        isLoading: this.isLoading
+      })
+    );
     if (!(await this.loadD3())) return;
 
     if (!this.graphRendered && this.graphData != null) {
       this.renderGraph();
       this.graphRendered = true;
     }
-    console.log("[RraComponent] renderedCallback end");
+    console.log(
+      "[RraComponent] renderedCallback end",
+      JSON.stringify({
+        recordId: this.recordId,
+        graphRendered: this.graphRendered,
+        hasGraphData: this.graphData != null,
+        graphDataNodeCount: this.graphData?.nodes?.length,
+        isLoading: this.isLoading
+      })
+    );
   }
 
   // getters
@@ -434,13 +573,6 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
     }
   }
 
-  handleAsyncToggle(event) {
-    this.useAsyncExecution = event.target.checked;
-    if (this.recordId) {
-      localStorage.setItem(`rra_${this.recordId}_useAsyncExecution`, this.useAsyncExecution);
-    }
-  }
-
   handleDeepWebSearchToggle(event) {
     this.useDeepWebSearch = event.target.checked;
     if (this.recordId) {
@@ -452,6 +584,26 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
     this.useRecordContext = event.target.checked;
     if (this.recordId) {
       localStorage.setItem(`rra_${this.recordId}_useRecordContext`, this.useRecordContext);
+    }
+  }
+
+  handleGenerateSyntheticDataToggle(event) {
+    this.generateSyntheticData = event.target.checked;
+    if (this.recordId) {
+      localStorage.setItem(
+        `rra_${this.recordId}_generateSyntheticData`,
+        this.generateSyntheticData
+      );
+    }
+  }
+
+  handleAppendToExistingResearchToggle(event) {
+    this.appendToExistingResearch = event.target.checked;
+    if (this.recordId) {
+      localStorage.setItem(
+        `rra_${this.recordId}_appendToExistingResearch`,
+        this.appendToExistingResearch
+      );
     }
   }
 
@@ -470,13 +622,12 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
     navigator.clipboard.writeText(this.diagnosticsJson);
   }
 
-  async handleResearchButtonClick(event) {
+  async handleResearchButtonClick() {
     if (this.isLoading) return;
 
     try {
       this.isLoading = true;
-      const isNewResearch = event.target.dataset.isnewresearch === "1";
-      await this.updateRelationships({ isNewResearch });
+      await this.updateRelationships();
     } catch (error) {
       const message = error?.body?.message || error?.message || "Unknown error";
       console.error("Error reloading data:", message, error);

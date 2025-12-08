@@ -4,7 +4,9 @@ public class RRAClientOptions {
   @AuraEnabled
   public Boolean useRecordContext = true;
   @AuraEnabled
-  public Boolean isNewResearch = true;
+  public Boolean appendToExistingResearch = false;
+  @AuraEnabled
+  public Boolean generateSyntheticData = true;
   @AuraEnabled
   public String entityMatcherMode;
 
