@@ -35,6 +35,20 @@
         <!-- Hint text -->
         <div class="graph-hint">Scroll to zoom · Drag to pan · Double-click to reset</div>
       </div>
+    <template if:true={relationshipData}>
+      <div class="slds-align_absolute-center slds-var-m-bottom_large">
+        <svg class="d3" width={options.width} height={options.height} lwc:dom="manual"></svg>
+      </div>
+    </template>
+
+    <div class="slds-align_absolute-center slds-p-around_xx-large">
+      <lightning-button
+        label="Start Research"
+        onclick={handleResearchButtonClick}
+        disabled={isLoading}
+        variant="brand"
+        data-isnewresearch="1"
+      ></lightning-button>
     </div>
 
     <c-rra-create-record-modal
@@ -55,15 +69,6 @@
 
     <template if:true={showDebug}>
       <div class="slds-p-around_medium text-display-pane">
-        <lightning-button
-          label="Start New Research"
-          onclick={handleResearchButtonClick}
-          disabled={isLoading}
-          variant="brand-outline"
-          data-isnewresearch="1"
-          class="slds-m-around_medium"
-        ></lightning-button>
-
         <lightning-button
           label="Continue Research"
           onclick={handleResearchButtonClick}
@@ -92,6 +97,12 @@
             checked={useRecordContext}
             onchange={handleRecordContextToggle}
           ></lightning-input>
+          <lightning-combobox
+            label="Entity Matcher Mode"
+            options={entityMatcherModeOptions}
+            value={entityMatcherMode}
+            onchange={handleEntityMatcherModeChange}
+          ></lightning-combobox>
         </div>
 
         <lightning-accordion

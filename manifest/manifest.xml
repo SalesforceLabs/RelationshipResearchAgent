@@ -12,5 +12,13 @@
         <members>*</members>
         <name>CustomObject</name>
     </types>
+    <types>
+        <members>*</members>
+        <name>Flow</name>
+    </types>
+     <types>
+        <members>*</members>
+        <name>GenAiPromptTemplate</name>
+    </types>
     <version>62.0</version>
 </Package>

@@ -12,6 +12,7 @@
 // decision was made to flatten the structure into a single top-level class.
 
 public with sharing class CrmDatabaseSelectors {
+  // When changing this list, make sure it's same list as in getAccountsByIds
   public static final List<SObjectField> ACCOUNT_FIELDS = new List<SObjectField>{
     Account.Id,
     Account.Name,
@@ -22,16 +23,15 @@ public with sharing class CrmDatabaseSelectors {
     Account.Industry,
     Account.Description
   };
-
+  // When changing this list, make sure to add to getContactsByIds
   public static final List<String> ACCOUNT_ASSOCIATED_FIELDS = new List<String>{
     'Account.Name',
     'Account.Industry'
   };
-
+  // When changing this list, make sure it's same as in getContactsByIds
   public static final List<SObjectField> CONTACT_FIELDS = new List<SObjectField>{
     Contact.Id,
-    Contact.FirstName,
-    Contact.LastName,
+    Contact.Name,
     Contact.Email,
     Contact.AccountId,
     Contact.Title,
@@ -76,6 +76,35 @@ public with sharing class CrmDatabaseSelectors {
     String soql = 'SELECT ' + ACCOUNT_FIELD_LIST + ' FROM Account WHERE Id = :recordId LIMIT 1';
     List<Account> rows = Database.query(soql);
     return rows.isEmpty() ? null : rows[0];
+  }
+
+  // This function is here to ensure that the field names are consistent between
+  // queries and to provide a single class to update field lists.
+  public static List<Account> getAccountsByIds(Set<Id> recordIds) {
+    List<Account> dbAccounts = [
+      SELECT Id, Name, Website, BillingCity, BillingState, BillingCountry, Industry, Description
+      FROM Account
+      WHERE Id IN :recordIds
+    ];
+    return dbAccounts;
+  }
+
+  public static List<Contact> getContactsByIds(Set<Id> recordIds, Set<Id> accountIds) {
+    List<Contact> dbContacts = [
+      SELECT
+        Id,
+        Name,
+        Email,
+        AccountId,
+        Title,
+        Department,
+        Description,
+        Account.Name,
+        Account.Industry
+      FROM Contact
+      WHERE Id IN :recordIds OR AccountId IN :accountIds
+    ];
+    return dbContacts;
   }
 
   public static List<Account> getNewestAccounts(Integer limitSize) {
