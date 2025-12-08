@@ -98,3 +98,63 @@
   background-color: #f3f3f3;
   border-radius: 8px;
 }
+
+/* Graph container for positioning controls */
+.graph-container {
+  position: relative;
+  display: inline-block;
+}
+
+/* Zoom controls panel */
+.zoom-controls {
+  position: absolute;
+  bottom: 48px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 8px;
+  padding: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.zoom-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #444;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+
+.zoom-btn:hover {
+  background: #f0f0f0;
+  color: #0176d3;
+}
+
+.zoom-btn:active {
+  background: #e0e0e0;
+}
+
+/* Hint text at bottom */
+.graph-hint {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: #706e6b;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 4px 12px;
+  border-radius: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+}

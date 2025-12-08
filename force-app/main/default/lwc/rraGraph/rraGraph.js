@@ -63,6 +63,7 @@ export class RraGraph {
   simulation = null;
   zoomBehavior = null;
   currentTransform = null;
+  svgSelection = null; // D3 selection of the SVG element
 
   constructor(options) {
     this.options = { ...RraGraph.defaultOptions, ...options };
@@ -110,9 +111,10 @@ export class RraGraph {
         labelClass: "node-label"
       }).maxLabelWidth;
       // Include badge button space for non-focus nodes (40px for button + spacing)
-      const badgeSpace = node.isFocus ? 0 : 40;
+      // Focus node gets extra right padding (20px) since it has no badge
+      const rightSpace = node.isFocus ? 20 : 40;
       node.shellWidth =
-        shellPadding + iconSize + shellIconTextGap + labelWidth + shellPadding + badgeSpace;
+        shellPadding + iconSize + shellIconTextGap + labelWidth + shellPadding + rightSpace;
       node.shellHalfWidth = node.shellWidth / 2;
       node.shellHalfHeight = shellHeight / 2;
       // Collision radius for force simulation (use the larger dimension)
@@ -204,6 +206,9 @@ export class RraGraph {
   _setupZoom(svg, rootGroup) {
     const { minZoom, maxZoom } = this.options;
 
+    // Store SVG selection for zoom control methods
+    this.svgSelection = svg;
+
     this.zoomBehavior = d3
       .zoom()
       .scaleExtent([minZoom, maxZoom])
@@ -227,6 +232,24 @@ export class RraGraph {
     svg.on("dblclick.zoom", () => {
       svg.transition().duration(300).call(this.zoomBehavior.transform, d3.zoomIdentity);
     });
+  }
+
+  // Zoom in by a fixed factor
+  zoomIn() {
+    if (!this.svgSelection || !this.zoomBehavior) return;
+    this.svgSelection.transition().duration(200).call(this.zoomBehavior.scaleBy, 1.3);
+  }
+
+  // Zoom out by a fixed factor
+  zoomOut() {
+    if (!this.svgSelection || !this.zoomBehavior) return;
+    this.svgSelection.transition().duration(200).call(this.zoomBehavior.scaleBy, 0.7);
+  }
+
+  // Reset zoom to initial state
+  resetZoom() {
+    if (!this.svgSelection || !this.zoomBehavior) return;
+    this.svgSelection.transition().duration(300).call(this.zoomBehavior.transform, d3.zoomIdentity);
   }
 
   render(data) {

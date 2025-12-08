@@ -28,8 +28,8 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
   @api objectApiName;
 
   options = {
-    width: 600,
-    height: 600
+    width: 800,
+    height: 800
   };
 
   diagnosticsData = null;
@@ -53,6 +53,9 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
   showCreateRecordModal = false;
   showConfirmMatchModal = false;
   selectedNodeData = {};
+
+  // graph instance for zoom control
+  graph = null;
 
   @wire(CurrentPageReference)
   currentPageReference;
@@ -171,17 +174,36 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
 
   renderGraph() {
     try {
-      const graph = new RraGraph({
+      this.graph = new RraGraph({
         ...this.options,
         svg: this.template.querySelector("svg.d3"),
         iconsUrl: ICONS_URL,
         iconsUtilUrl: ICONS_UTIL_URL,
         onNodeClick: this.handleNodeClick.bind(this)
       });
-      graph.clear();
-      graph.render(this.graphData);
+      this.graph.clear();
+      this.graph.render(this.graphData);
     } catch (error) {
       console.error("Error rendering graph:", error.toString());
+    }
+  }
+
+  // Zoom control handlers
+  handleZoomIn() {
+    if (this.graph) {
+      this.graph.zoomIn();
+    }
+  }
+
+  handleZoomOut() {
+    if (this.graph) {
+      this.graph.zoomOut();
+    }
+  }
+
+  handleZoomReset() {
+    if (this.graph) {
+      this.graph.resetZoom();
     }
   }
 
