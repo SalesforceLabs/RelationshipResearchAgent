@@ -1,3 +1,5 @@
+import * as Constants from "c/rraConstants";
+
 export class RraGraph {
   static BADGE_BACKGROUND_MIN_RADIUS = 6;
   static LINK_BADGE_SIZE = 12;
@@ -109,12 +111,6 @@ export class RraGraph {
       icon = RraGraph.entityTypeToIconId[d.entityType.toLowerCase()];
     }
     return icon || RraGraph.DEFAULT_ENTITY_ICON;
-  }
-
-  // CRM badge (e.g., link icon) to show in the corner if node has a CRM record and isn't the anchor
-  // node.
-  getCrmBadgeIconId() {
-    return "link";
   }
 
   getIconUrl(icon) {
@@ -319,10 +315,7 @@ export class GraphDataBuilder {
     const anchorLabel = coalesce(anchorEntity.canonicalName, anchorName);
     const anchorRecordId = coalesce(recordId, anchorEntity.recordId);
     const anchorRecordType = coalesce(recordType, anchorEntity.recordType, "account");
-    const anchorEntityType = coalesce(
-      anchorEntity.entityType,
-      "organization" // the entity type equivalent of record type 'Account'
-    )?.toLowerCase();
+    const anchorEntityType = coalesce(anchorEntity.entityType, Constants.ENTITY_TYPES.ORGANIZATION);
 
     const nodes = {};
     const links = {};
@@ -368,8 +361,8 @@ export class GraphDataBuilder {
       }
 
       const label = coalesce(rel.canonicalName, otherName);
-      const entityType = coalesce(rel.entityType, "organization");
-      const isCrmLink = rel.source === "crm" || rel.isCrmConfirmed;
+      const entityType = coalesce(rel.entityType, Constants.ENTITY_TYPES.ORGANIZATION);
+      const isCrmLink = rel.source === Constants.SOURCE_TYPES.CRM || rel.isCrmConfirmed;
       const isStrongInfluencer = nodeCount < strongInfluencerThreshold;
 
       nodes[otherName] = {

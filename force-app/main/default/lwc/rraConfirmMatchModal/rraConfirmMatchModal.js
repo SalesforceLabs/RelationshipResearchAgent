@@ -1,4 +1,5 @@
 import { LightningElement, api, track } from "lwc";
+import * as Constants from "c/rraConstants";
 
 export default class RraConfirmMatchModal extends LightningElement {
   @api isOpen = false;
@@ -9,19 +10,19 @@ export default class RraConfirmMatchModal extends LightningElement {
   @track isConfirming = false;
 
   get isContact() {
-    return this.nodeData?.titlecaseRecordType === "Contact";
+    return this.nodeData?.titlecaseRecordType === Constants.RECORD_TYPES.CONTACT;
   }
 
   get isAccount() {
-    return this.nodeData?.titlecaseRecordType === "Account";
+    return this.nodeData?.titlecaseRecordType === Constants.RECORD_TYPES.ACCOUNT;
   }
 
   get isLead() {
-    return this.nodeData?.titlecaseRecordType === "Lead";
+    return this.nodeData?.titlecaseRecordType === Constants.RECORD_TYPES.LEAD;
   }
 
   get isOpportunity() {
-    return this.nodeData?.titlecaseRecordType === "Opportunity";
+    return this.nodeData?.titlecaseRecordType === Constants.RECORD_TYPES.OPPORTUNITY;
   }
 
   get confirmButtonLabel() {

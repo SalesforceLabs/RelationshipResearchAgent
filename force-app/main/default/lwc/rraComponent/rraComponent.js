@@ -1,4 +1,4 @@
-import { track, LightningElement, api, wire } from "lwc";
+import { LightningElement, api, wire } from "lwc";
 import { ShowToastEvent } from "lightning/platformShowToastEvent";
 import { loadScript } from "lightning/platformResourceLoader";
 import { CurrentPageReference, NavigationMixin } from "lightning/navigation";
@@ -13,17 +13,10 @@ import ICONS_URL from "@salesforce/resourceUrl/symbols";
 import ICONS_UTIL_URL from "@salesforce/resourceUrl/symbolsutil";
 
 import { RraGraph, GraphDataBuilder } from "c/rraGraph";
+import * as Constants from "c/rraConstants";
 
 export default class RraComponent extends NavigationMixin(LightningElement) {
   static d3Loaded = false;
-
-  // TODO: Update the prompt to return titlecase record types instead of handling conversion here
-  static RECORD_TYPE_TITLECASE = {
-    lead: "Lead",
-    contact: "Contact",
-    account: "Account",
-    opportunity: "Opportunity"
-  };
 
   @api recordId;
   @api objectApiName;
@@ -451,7 +444,7 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
 
     this.selectedNodeData = {
       ...nodeData,
-      titlecaseRecordType: RraComponent.RECORD_TYPE_TITLECASE[nodeData.recordType] || ""
+      titlecaseRecordType: Constants.RECORD_TYPE_TITLECASE_MAP[nodeData.recordType] || ""
     };
     this.showSidePanel = true;
   }

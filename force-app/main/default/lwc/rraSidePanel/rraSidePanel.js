@@ -1,27 +1,9 @@
 import { LightningElement, api } from "lwc";
+import * as Constants from "c/rraConstants";
 
 export default class RraSidePanel extends LightningElement {
   @api isOpen = false;
   @api nodeData = null;
-
-  static RECORD_TYPE_MAP = {
-    lead: "Lead",
-    contact: "Contact",
-    account: "Account",
-    opportunity: "Opportunity"
-  };
-
-  static RECORD_TYPE_ICON_MAP = {
-    lead: "standard:lead",
-    contact: "standard:contact",
-    account: "standard:account",
-    opportunity: "standard:opportunity"
-  };
-
-  static ENTITY_TYPE_ICON_MAP = {
-    person: "standard:contact",
-    organization: "standard:account"
-  };
 
   get panelClasses() {
     return `slds-panel slds-size_medium slds-panel_docked slds-panel_docked-right ${
@@ -38,23 +20,17 @@ export default class RraSidePanel extends LightningElement {
   }
 
   get entityIcon() {
-    if (!this.nodeData) return "standard:account";
+    if (!this.nodeData) return Constants.DEFAULT_ICON;
 
     if (this.nodeData.recordType) {
-      return (
-        RraSidePanel.RECORD_TYPE_ICON_MAP[this.nodeData.recordType.toLowerCase()] ||
-        "standard:account"
-      );
+      return Constants.RECORD_TYPE_ICON_MAP[this.nodeData.recordType] || Constants.DEFAULT_ICON;
     }
 
     if (this.nodeData.entityType) {
-      return (
-        RraSidePanel.ENTITY_TYPE_ICON_MAP[this.nodeData.entityType.toLowerCase()] ||
-        "standard:account"
-      );
+      return Constants.ENTITY_TYPE_ICON_MAP[this.nodeData.entityType] || Constants.DEFAULT_ICON;
     }
 
-    return "standard:account";
+    return Constants.DEFAULT_ICON;
   }
 
   get entitySubtitle() {
@@ -64,10 +40,10 @@ export default class RraSidePanel extends LightningElement {
 
     if (this.nodeData.recordType) {
       parts.push(
-        RraSidePanel.RECORD_TYPE_MAP[this.nodeData.recordType] || this.nodeData.recordType
+        Constants.RECORD_TYPE_TITLECASE_MAP[this.nodeData.recordType] || this.nodeData.recordType
       );
     } else if (this.nodeData.entityType) {
-      parts.push(this.formattedEntityType);
+      parts.push(this.nodeData.entityType);
     }
 
     if (this.nodeData.source) {
@@ -79,12 +55,7 @@ export default class RraSidePanel extends LightningElement {
 
   get sourceLabel() {
     if (!this.nodeData?.source) return "";
-    const sourceMap = {
-      web: "Web Source",
-      crm: "CRM",
-      datacloud: "Data Cloud"
-    };
-    return sourceMap[this.nodeData.source] || this.nodeData.source;
+    return Constants.SOURCE_LABEL_MAP[this.nodeData.source] || this.nodeData.source;
   }
 
   get hasRecordId() {
@@ -92,17 +63,11 @@ export default class RraSidePanel extends LightningElement {
   }
 
   get needsConfirmation() {
-    return this.nodeData?.source === "web" && !this.nodeData?.isCrmConfirmed;
+    return this.nodeData?.source === Constants.SOURCE_TYPES.WEB && !this.nodeData?.isCrmConfirmed;
   }
 
   get hasCitation() {
     return !!this.nodeData?.citation;
-  }
-
-  get formattedEntityType() {
-    if (!this.nodeData?.entityType) return "";
-    const type = this.nodeData.entityType;
-    return type.charAt(0).toUpperCase() + type.slice(1);
   }
 
   get truncatedCitationURL() {
@@ -118,7 +83,7 @@ export default class RraSidePanel extends LightningElement {
   get contextHeading() {
     if (!this.nodeData) return "About";
 
-    const isPerson = this.nodeData.entityType === "person";
+    const isPerson = this.nodeData.entityType === Constants.ENTITY_TYPES.PERSON;
     const prefix = isPerson ? "Who is" : "About";
     return `${prefix} ${this.nodeData.label}`;
   }
