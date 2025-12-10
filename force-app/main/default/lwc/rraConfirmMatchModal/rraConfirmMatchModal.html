@@ -21,10 +21,7 @@
         <div class="slds-modal__content slds-var-p-around_medium">
           <!-- Record Display Form -->
           <template if:true={recordId}>
-            <lightning-record-view-form
-              record-id={recordId}
-              object-api-name={nodeData.titlecaseRecordType}
-            >
+            <lightning-record-view-form record-id={recordId} object-api-name={titlecaseRecordType}>
               <template if:true={isContact}>
                 <div class="slds-grid slds-wrap slds-gutters_small">
                   <div class="slds-col slds-size_1-of-2">

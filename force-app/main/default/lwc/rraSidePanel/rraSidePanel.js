@@ -11,42 +11,76 @@ export default class RraSidePanel extends LightningElement {
     }`;
   }
 
+  get isEdge() {
+    return this.nodeData?.isEdge === true;
+  }
+
+  get anchorNode() {
+    return this.nodeData?.anchorNode;
+  }
+
+  get targetNode() {
+    return this.nodeData?.targetNode;
+  }
+
   get panelTitle() {
-    return this.nodeData.strongInfluencer ? "Strong Influencer" : "Relationship";
+    if (this.isEdge) {
+      return "Relationship";
+    }
+    return this.targetNode?.isStrongInfluencer ? "Strong Influencer" : "Relationship";
   }
 
   get showStrongInfluencerIcon() {
-    return this.nodeData.strongInfluencer;
+    return !this.isEdge && this.targetNode?.isStrongInfluencer;
+  }
+
+  get anchorIcon() {
+    return this.nodeIcon(this.anchorNode);
   }
 
   get entityIcon() {
-    if (!this.nodeData) return Constants.DEFAULT_ICON;
+    return this.nodeIcon(this.targetNode);
+  }
 
-    if (this.nodeData.recordType) {
-      return Constants.RECORD_TYPE_ICON_MAP[this.nodeData.recordType] || Constants.DEFAULT_ICON;
+  nodeIcon(node) {
+    if (!node) return Constants.DEFAULT_ICON;
+
+    if (node.recordType) {
+      // lowercase needed because anchor node has titlecase record type while target entity does not
+      return (
+        Constants.RECORD_TYPE_ICON_MAP[node.recordType.toLowerCase()] || Constants.DEFAULT_ICON
+      );
     }
 
-    if (this.nodeData.entityType) {
-      return Constants.ENTITY_TYPE_ICON_MAP[this.nodeData.entityType] || Constants.DEFAULT_ICON;
+    if (node.entityType) {
+      return Constants.ENTITY_TYPE_ICON_MAP[node.entityType] || Constants.DEFAULT_ICON;
     }
 
     return Constants.DEFAULT_ICON;
   }
 
+  get anchorSubtitle() {
+    return this.buildSubtitle(this.anchorNode);
+  }
+
   get entitySubtitle() {
-    if (!this.nodeData) return "";
+    return this.buildSubtitle(this.targetNode);
+  }
+
+  buildSubtitle(node) {
+    if (!node) return "";
 
     const parts = [];
 
-    if (this.nodeData.recordType) {
+    if (node.recordType) {
       parts.push(
-        Constants.RECORD_TYPE_TITLECASE_MAP[this.nodeData.recordType] || this.nodeData.recordType
+        Constants.RECORD_TYPE_TITLECASE_MAP[node.recordType.toLowerCase()] || node.recordType
       );
-    } else if (this.nodeData.entityType) {
-      parts.push(this.nodeData.entityType);
+    } else if (node.entityType) {
+      parts.push(node.entityType);
     }
 
-    if (this.nodeData.source) {
+    if (node.source) {
       parts.push(this.sourceLabel);
     }
 
@@ -54,25 +88,32 @@ export default class RraSidePanel extends LightningElement {
   }
 
   get sourceLabel() {
-    if (!this.nodeData?.source) return "";
-    return Constants.SOURCE_LABEL_MAP[this.nodeData.source] || this.nodeData.source;
+    if (!this.targetNode?.source) return "";
+    return Constants.SOURCE_LABEL_MAP[this.targetNode.source] || this.targetNode.source;
+  }
+
+  nodeSourceLabel(node) {
+    if (!node.source) return "";
+    return Constants.SOURCE_LABEL_MAP[node] || source;
   }
 
   get hasRecordId() {
-    return !!this.nodeData?.recordId;
+    return !!this.targetNode?.recordId;
   }
 
   get needsConfirmation() {
-    return this.nodeData?.source === Constants.SOURCE_TYPES.WEB && !this.nodeData?.isCrmConfirmed;
+    return (
+      this.targetNode?.source === Constants.SOURCE_TYPES.WEB && !this.targetNode?.isCrmConfirmed
+    );
   }
 
   get hasCitation() {
-    return !!this.nodeData?.citation;
+    return !!this.targetNode?.citation;
   }
 
   get truncatedCitationURL() {
-    if (!this.nodeData?.citationURL) return "";
-    const url = this.nodeData.citationURL;
+    if (!this.targetNode?.citationURL) return "";
+    const url = this.targetNode.citationURL;
     const maxLength = 100;
     if (url.length <= maxLength) {
       return url;
@@ -81,11 +122,11 @@ export default class RraSidePanel extends LightningElement {
   }
 
   get contextHeading() {
-    if (!this.nodeData) return "About";
+    if (!this.targetNode) return "About";
 
-    const isPerson = this.nodeData.entityType === Constants.ENTITY_TYPES.PERSON;
+    const isPerson = this.targetNode.entityType === Constants.ENTITY_TYPES.PERSON;
     const prefix = isPerson ? "Who is" : "About";
-    return `${prefix} ${this.nodeData.label}`;
+    return `${prefix} ${this.targetNode.label}`;
   }
 
   handleClose() {
@@ -100,7 +141,7 @@ export default class RraSidePanel extends LightningElement {
     this.dispatchEvent(
       new CustomEvent("confirmmatch", {
         detail: {
-          nodeData: this.nodeData
+          nodeData: this.targetNode
         }
       })
     );
@@ -110,7 +151,7 @@ export default class RraSidePanel extends LightningElement {
     this.dispatchEvent(
       new CustomEvent("viewrecord", {
         detail: {
-          nodeData: this.nodeData
+          nodeData: this.targetNode
         }
       })
     );
@@ -120,7 +161,7 @@ export default class RraSidePanel extends LightningElement {
     this.dispatchEvent(
       new CustomEvent("createrecord", {
         detail: {
-          nodeData: this.nodeData
+          nodeData: this.targetNode
         }
       })
     );

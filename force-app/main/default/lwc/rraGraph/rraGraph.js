@@ -27,7 +27,8 @@ export class RraGraph {
     // Label sizing; used for layout calculations
     maxLabelChars: 20, // higher hard cap than ERI1's; beyond this we add "…"
 
-    onNodeClick: null // callback for node click events
+    onNodeClick: null, // callback for node click events
+    onEdgeClick: null // callback for edge click events
   };
 
   // Mapping beteen entity type and SLDS icon id.
@@ -164,18 +165,36 @@ export class RraGraph {
       })
       .filter(Boolean);
 
-    svg
-      .append("g")
-      .attr("class", "links")
-      .selectAll("line")
-      .data(links)
-      .enter()
+    const linksG = svg.append("g").attr("class", "links");
+
+    const linkGroups = linksG.selectAll("g").data(links).enter().append("g");
+
+    // Invisible wider hit area to make clicking edges easier for opening side panel
+    linkGroups
+      .append("line")
+      .attr("class", "link-hit-area")
+      .attr("x1", (d) => d.source.x)
+      .attr("y1", (d) => d.source.y)
+      .attr("x2", (d) => d.target.x)
+      .attr("y2", (d) => d.target.y)
+      .attr("stroke", "transparent")
+      .attr("stroke-width", 16)
+      .style("cursor", "pointer")
+      .on("click", (event, d) => {
+        if (this.options.onEdgeClick) {
+          this.options.onEdgeClick(d);
+        }
+      });
+
+    // Visible line
+    linkGroups
       .append("line")
       .attr("class", (d) => `link-line ${d.isCrmLink ? "link-crm" : "link-default"}`)
       .attr("x1", (d) => d.source.x)
       .attr("y1", (d) => d.source.y)
       .attr("x2", (d) => d.target.x)
-      .attr("y2", (d) => d.target.y);
+      .attr("y2", (d) => d.target.y)
+      .attr("pointer-events", "none");
 
     const g = svg
       .append("g")
@@ -379,7 +398,9 @@ export class GraphDataBuilder {
         context: rel.context || undefined,
         citation: rel.citation || undefined,
         citationURL: rel.citationURL || undefined,
-        strongInfluencer: isStrongInfluencer
+        isStrongInfluencer,
+        strengthSummary: rel.strengthSummary,
+        entityDescription: rel.entityDescription
       };
 
       const pairKey = GraphDataBuilder.keyForPair(anchorName, otherName);
@@ -391,7 +412,10 @@ export class GraphDataBuilder {
       links[pairKey] = {
         source: anchorName,
         target: otherName,
-        isCrmLink
+        isCrmLink,
+        anchorNode: nodes[anchorName],
+        targetNode: nodes[otherName],
+        context: rel.context
       };
 
       nodeCount++;

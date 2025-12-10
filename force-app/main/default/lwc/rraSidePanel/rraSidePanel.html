@@ -17,9 +17,9 @@
             </div>
           </template>
           <div class="slds-media__body">
-            <h2 id="side-panel-heading" class="slds-panel__header-title slds-text-heading_medium">
+            <span id="side-panel-heading" class="slds-panel__header-title slds-text-heading_medium">
               {panelTitle}
-            </h2>
+            </span>
           </div>
         </div>
         <lightning-button-icon
@@ -31,8 +31,23 @@
         ></lightning-button-icon>
       </div>
       <div class="slds-panel__body">
-        <template if:true={nodeData}>
-          <div class="slds-m-bottom_small">
+        <template if:true={targetNode}>
+          <!-- Edge (relationship) content -->
+          <template if:true={isEdge}>
+            <div class="slds-media slds-media_center slds-m-bottom_none">
+              <div class="slds-media__figure">
+                <span class="entity-avatar">
+                  <lightning-icon icon-name={anchorIcon} size="small"></lightning-icon>
+                </span>
+              </div>
+              <div class="slds-media__body">
+                <div class="slds-text-heading_medium slds-text-title_bold">{anchorNode.label}</div>
+                <div class="slds-text-body_small slds-text-color_weak">{anchorSubtitle}</div>
+              </div>
+            </div>
+
+            <div class="relationship-arrow">↿⇂</div>
+
             <div class="slds-media slds-media_center slds-m-bottom_x-small">
               <div class="slds-media__figure">
                 <span class="entity-avatar">
@@ -40,28 +55,74 @@
                 </span>
               </div>
               <div class="slds-media__body">
-                <div class="slds-text-heading_medium slds-text-title_bold">{nodeData.label}</div>
+                <div class="slds-text-heading_medium slds-text-title_bold">{targetNode.label}</div>
                 <div class="slds-text-body_small slds-text-color_weak">{entitySubtitle}</div>
               </div>
             </div>
-            <hr class="slds-m-top_small" />
-          </div>
 
-          <template if:true={nodeData.context}>
-            <div class="slds-m-bottom_medium">
-              <h3 class="slds-text-heading_small slds-m-bottom_small">{contextHeading}</h3>
-              <div class="slds-text-body_regular">{nodeData.context}</div>
-            </div>
+            <hr class="slds-m-top_small slds-m-bottom_medium" />
+
+            <template if:true={targetNode.context}>
+              <div class="slds-m-bottom_medium">
+                <span class="slds-text-heading_small slds-m-bottom_small section-heading"
+                  >Connection Context</span
+                >
+                <div class="slds-text-body_regular">{targetNode.context}</div>
+              </div>
+            </template>
+
+            <template if:true={targetNode.strengthSummary}>
+              <div class="slds-m-bottom_medium">
+                <span class="slds-text-heading_small slds-m-bottom_small section-heading"
+                  >Relationship Strength</span
+                >
+                <div class="slds-text-body_regular">{targetNode.strengthSummary}</div>
+              </div>
+            </template>
           </template>
 
+          <!-- Node content -->
+          <template if:false={isEdge}>
+            <div class="slds-m-bottom_small">
+              <div class="slds-media slds-media_center slds-m-bottom_x-small">
+                <div class="slds-media__figure">
+                  <span class="entity-avatar">
+                    <lightning-icon icon-name={entityIcon} size="small"></lightning-icon>
+                  </span>
+                </div>
+                <div class="slds-media__body">
+                  <div class="slds-text-heading_medium slds-text-title_bold">
+                    {targetNode.label}
+                  </div>
+                  <div class="slds-text-body_small slds-text-color_weak">{entitySubtitle}</div>
+                </div>
+              </div>
+              <hr class="slds-m-top_small slds-m-bottom_medium" />
+            </div>
+
+            <template if:true={targetNode.entityDescription}>
+              <div class="slds-m-bottom_medium">
+                <span class="slds-text-heading_small slds-m-bottom_small section-heading"
+                  >{contextHeading}</span
+                >
+                <div class="slds-text-body_regular">{targetNode.entityDescription}</div>
+              </div>
+            </template>
+          </template>
+
+          <!-- Shared citation section -->
           <template if:true={hasCitation}>
             <div class="slds-m-bottom_medium">
-              <h3 class="slds-text-heading_small slds-m-bottom_small">Citation</h3>
-              <div class="slds-text-body_small slds-text-color_weak">{nodeData.citation}</div>
-              <template if:true={nodeData.citationURL}>
+              <span class="slds-text-heading_small slds-m-bottom_small section-heading"
+                >Citation</span
+              >
+              <div class="slds-text-body_small slds-text-color_weak citation">
+                "{targetNode.citation}"
+              </div>
+              <template if:true={targetNode.citationURL}>
                 <div class="slds-m-top_x-small">
                   <a
-                    href={nodeData.citationURL}
+                    href={targetNode.citationURL}
                     target="_blank"
                     rel="noopener noreferrer"
                     class="slds-text-link"
@@ -75,28 +136,30 @@
         </template>
       </div>
       <div class="slds-panel__footer">
-        <template if:true={hasRecordId}>
-          <template if:true={needsConfirmation}>
+        <template if:true={targetNode}>
+          <template if:true={hasRecordId}>
+            <template if:true={needsConfirmation}>
+              <lightning-button
+                label="Match Record"
+                variant="neutral"
+                onclick={handleConfirmMatch}
+              ></lightning-button>
+            </template>
+            <template if:false={needsConfirmation}>
+              <lightning-button
+                label="View Record"
+                variant="neutral"
+                onclick={handleViewRecord}
+              ></lightning-button>
+            </template>
+          </template>
+          <template if:false={hasRecordId}>
             <lightning-button
-              label="Match Record"
+              label="Create Record"
               variant="neutral"
-              onclick={handleConfirmMatch}
+              onclick={handleCreateRecord}
             ></lightning-button>
           </template>
-          <template if:false={needsConfirmation}>
-            <lightning-button
-              label="View Record"
-              variant="neutral"
-              onclick={handleViewRecord}
-            ></lightning-button>
-          </template>
-        </template>
-        <template if:false={hasRecordId}>
-          <lightning-button
-            label="Create Record"
-            variant="neutral"
-            onclick={handleCreateRecord}
-          ></lightning-button>
         </template>
       </div>
     </section>

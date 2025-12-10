@@ -173,7 +173,8 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
         svg: this.template.querySelector("svg.d3"),
         iconsUrl: ICONS_URL,
         iconsUtilUrl: ICONS_UTIL_URL,
-        onNodeClick: this.handleNodeClick.bind(this)
+        onNodeClick: this.handleNodeClick.bind(this),
+        onEdgeClick: this.handleEdgeClick.bind(this)
       });
       graph.clear();
       graph.render(this.graphData);
@@ -442,9 +443,20 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
       return;
     }
 
+    const anchorNode = this.graphData.nodes.find((n) => n.isFocus);
     this.selectedNodeData = {
-      ...nodeData,
-      titlecaseRecordType: Constants.RECORD_TYPE_TITLECASE_MAP[nodeData.recordType] || ""
+      isEdge: false,
+      anchorNode,
+      targetNode: nodeData
+    };
+    this.showSidePanel = true;
+  }
+
+  handleEdgeClick(edgeData) {
+    this.selectedNodeData = {
+      isEdge: true,
+      anchorNode: edgeData.anchorNode,
+      targetNode: edgeData.targetNode
     };
     this.showSidePanel = true;
   }
@@ -497,7 +509,7 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
   }
 
   async handleConfirmMatch(event) {
-    const { recordId, objectApiName, nodeId, nodeData } = event.detail;
+    const { nodeId, nodeData } = event.detail;
 
     try {
       await confirmCrmMatch({
@@ -550,7 +562,7 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
   }
 
   async handleCreateRecord(event) {
-    const { nodeId, objectType, formData, sourceData } = event.detail;
+    const { objectType } = event.detail;
     const recordType = objectType;
 
     try {

@@ -67,9 +67,28 @@
   display: block;
 }
 
+.star-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #ffb300;
+}
+
 .star-icon lightning-icon {
-  --slds-c-icon-color-foreground: #ffd700;
-  --slds-c-icon-color-foreground-default: #ffd700;
+  --slds-c-icon-color-foreground: #ffffff;
+  --slds-c-icon-color-foreground-default: #ffffff;
+  transform: scale(0.75);
+}
+
+.citation {
+  font-style: italic;
+}
+
+.section-heading {
+  display: block;
 }
 
 .entity-avatar {
@@ -88,4 +107,22 @@
   background-color: #5867e8;
   border-radius: 50%;
   padding: 8px;
+}
+
+.relationship-entities {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.relationship-arrow {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  line-height: 0.8;
+  margin-bottom: 12px;
+  color: #706e6b5c;
+  font-size: 24px;
+  letter-spacing: -0.3em;
 }
