@@ -65,6 +65,14 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
   // graph instance for zoom control
   graph = null;
 
+  // Platform Event subscription
+  subscription = {};
+  channelName = "/event/RRA_Job_Complete__e";
+  isResearchInProgress = false;
+
+  // Store wire result for refresh
+  wiredRelationshipsResult;
+
   @wire(CurrentPageReference)
   currentPageReference;
 

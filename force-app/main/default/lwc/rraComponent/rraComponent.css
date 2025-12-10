@@ -14,11 +14,16 @@
   fill: #ffffff;
   stroke: #d0d0d0;
   stroke-width: 1;
+  cursor: help;
 }
 
 .edge-icon {
   pointer-events: none;
   fill: #5c5c5c;
+}
+
+.edge-badge {
+  pointer-events: auto;
 }
 
 /* Node shells */
@@ -97,12 +102,17 @@
 .d3 {
   background-color: #f3f3f3;
   border-radius: 8px;
+  width: 100%;
+  height: auto;
+  display: block;
 }
 
 /* Graph container for positioning controls */
 .graph-container {
   position: relative;
-  display: inline-block;
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
 }
 
 /* Zoom controls panel */

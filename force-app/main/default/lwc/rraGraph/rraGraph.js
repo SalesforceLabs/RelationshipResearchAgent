@@ -351,6 +351,9 @@ export class RraGraph {
       .attr("y", -RraGraph.EDGE_ICON_SIZE / 2)
       .attr("class", "edge-icon edge-icon-web");
 
+    // Add tooltips to edge badges
+    this._setupEdgeBadgeTooltips(edgeBadges);
+
     // Render nodes
     const nodeGroup = rootGroup.append("g").attr("class", "nodes");
 
@@ -410,7 +413,6 @@ export class RraGraph {
       .attr("y", -iconSize / 2)
       .attr("class", "node-icon");
 
-    // Text label - with help cursor for tooltip hint
     nodeElements
       .append("text")
       .attr("class", "node-label")
@@ -419,7 +421,7 @@ export class RraGraph {
       .attr("text-anchor", "start")
       .attr("dominant-baseline", "central")
       .style("pointer-events", "auto")
-      .style("cursor", "help")
+      .style("cursor", "pointer")
       .text((d) => getLabelText(d));
 
     // Badge overlay for non-focus nodes
@@ -583,6 +585,42 @@ export class RraGraph {
     nodeSelection.selectAll(".node-label").on("mouseleave", () => {
       hideTooltip();
     });
+  }
+
+  // Set up tooltips for edge source badges (CRM/Web icons)
+  _setupEdgeBadgeTooltips(edgeBadgeSelection) {
+    const tooltip = this._createTooltip();
+
+    const showTooltip = (event, d) => {
+      const sourceType = d.isCrmLink ? "CRM" : "Web";
+      const content = `This relationship is derived from ${sourceType} source`;
+      tooltip.html(content);
+
+      const position = this._calculateTooltipPositionFromEvent(event);
+      tooltip
+        .style("left", position.x + "px")
+        .style("top", position.y + "px")
+        .style("opacity", 0.95);
+    };
+
+    const hideTooltip = () => {
+      tooltip.style("opacity", 0);
+    };
+
+    // Make edge badges interactive
+    edgeBadgeSelection
+      .style("cursor", "help")
+      .style("pointer-events", "auto")
+      .on("mouseenter", (event, d) => {
+        showTooltip(event, d);
+      })
+      .on("mousemove", (event) => {
+        const position = this._calculateTooltipPositionFromEvent(event);
+        tooltip.style("left", position.x + "px").style("top", position.y + "px");
+      })
+      .on("mouseleave", () => {
+        hideTooltip();
+      });
   }
 }
 

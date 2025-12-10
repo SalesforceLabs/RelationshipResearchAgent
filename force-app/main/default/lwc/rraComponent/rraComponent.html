@@ -7,9 +7,14 @@
     </template>
 
     <template if:true={relationshipData}>
-      <div class="slds-align_absolute-center slds-var-m-bottom_large">
+      <div class="slds-var-m-bottom_large slds-p-horizontal_medium">
         <div class="graph-container">
-          <svg class="d3" width={options.width} height={options.height} lwc:dom="manual"></svg>
+          <svg
+            class="d3"
+            viewBox="0 0 800 800"
+            preserveAspectRatio="xMidYMid meet"
+            lwc:dom="manual"
+          ></svg>
 
           <!-- Zoom controls overlay -->
           <div class="zoom-controls">
