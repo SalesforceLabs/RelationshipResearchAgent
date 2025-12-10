@@ -44,13 +44,12 @@
       </div>
     </template>
 
-    <div class="slds-align_absolute-center slds-p-around_xx-large">
+    <div class="slds-align_absolute-center slds-p-around_medium">
       <lightning-button
         label="Start Research"
         onclick={handleResearchButtonClick}
         disabled={isLoading}
         variant="brand"
-        data-isnewresearch="1"
       ></lightning-button>
     </div>
 
@@ -72,22 +71,7 @@
 
     <template if:true={showDebug}>
       <div class="slds-p-around_medium text-display-pane">
-        <lightning-button
-          label="Continue Research"
-          onclick={handleResearchButtonClick}
-          disabled={isLoading}
-          variant="brand-outline"
-          class="slds-m-around_medium"
-          data-isnewresearch="0"
-        ></lightning-button>
-
         <div class="slds-m-top_medium">
-          <lightning-input
-            type="checkbox"
-            label="Async Execution"
-            checked={useAsyncExecution}
-            onchange={handleAsyncToggle}
-          ></lightning-input>
           <lightning-input
             type="checkbox"
             label="Perform Deep Web Search"
@@ -100,11 +84,24 @@
             checked={useRecordContext}
             onchange={handleRecordContextToggle}
           ></lightning-input>
+          <lightning-input
+            type="checkbox"
+            label="Generate Synthetic Data"
+            checked={generateSyntheticData}
+            onchange={handleGenerateSyntheticDataToggle}
+          ></lightning-input>
+          <lightning-input
+            type="checkbox"
+            label="Append to Existing Research"
+            checked={appendToExistingResearch}
+            onchange={handleAppendToExistingResearchToggle}
+          ></lightning-input>
           <lightning-combobox
             label="Entity Matcher Mode"
             options={entityMatcherModeOptions}
             value={entityMatcherMode}
             onchange={handleEntityMatcherModeChange}
+            class="slds-m-top_medium"
           ></lightning-combobox>
         </div>
 

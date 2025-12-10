@@ -1,6 +1,13 @@
 public with sharing class RRAClient {
   @AuraEnabled(cacheable=false)
-  public static String createRelationships(String recordId, RRAClientOptions options) {
+  public static String createRelationships(String recordId, String optionsJson) {
+    RRAClientOptions options = (RRAClientOptions) JSON.deserialize(
+      optionsJson,
+      RRAClientOptions.class
+    );
+
+    RRADiagnostics.getInstance().put('options', JSON.deserializeUntyped(JSON.serialize(options)));
+
     ICrmReferentialEntity targetEntity = CrmReferentialEntityResolver.resolveById(recordId);
 
     System.debug('Creating relationships for target entity: ' + targetEntity.serialize());
@@ -15,11 +22,20 @@ public with sharing class RRAClient {
       targetEntity.getSobjectType()
     );
 
-    RelationshipInsightsEnvelope insights = RelationshipInsightsService.getInsights(
-      targetEntity,
-      rraRecord,
-      options
-    );
+    RelationshipInsightsEnvelope insights;
+
+    if (options.generateSyntheticData) {
+      Long startTime = System.now().getTime();
+      Long endTime = startTime + 3000; // 3 seconds
+      while (System.now().getTime() < endTime) {
+        // Simulate processing delay
+      }
+      System.debug('Using synthetic data generation (simulated 3s delay)');
+      insights = RRATestFactory.generateSyntheticDataEnvelope(targetEntity);
+    } else {
+      insights = RelationshipInsightsService.getInsights(targetEntity, rraRecord, options);
+    }
+
     return RelationshipInsightsPersister.persist(insights, rraRecord);
   }
 

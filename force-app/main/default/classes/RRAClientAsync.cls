@@ -1,6 +1,6 @@
 public with sharing class RRAClientAsync implements Queueable {
   private String recordId;
-  private RRAClientOptions options;
+  private String optionsJson;
   public class JobResponse {
     public String jobId;
     public String status;
@@ -11,9 +11,9 @@ public with sharing class RRAClientAsync implements Queueable {
     }
   }
 
-  public RRAClientAsync(String recordId, RRAClientOptions options) {
+  public RRAClientAsync(String recordId, String optionsJson) {
     this.recordId = recordId;
-    this.options = options;
+    this.optionsJson = optionsJson;
   }
 
   private static String getCacheKey(String recordId) {
@@ -21,7 +21,7 @@ public with sharing class RRAClientAsync implements Queueable {
   }
 
   @AuraEnabled(cacheable=false)
-  public static String createRelationshipsAsync(String recordId, RRAClientOptions options) {
+  public static String createRelationshipsAsync(String recordId, String optionsJson) {
     String jobKey = getCacheKey(recordId);
     Cache.OrgPartition rraPartition = CacheProvider.getRRAPartition();
 
@@ -45,7 +45,7 @@ public with sharing class RRAClientAsync implements Queueable {
       }
     }
 
-    Id jobId = System.enqueueJob(new RRAClientAsync(recordId, options));
+    Id jobId = System.enqueueJob(new RRAClientAsync(recordId, optionsJson));
 
     // Cache for 2 hours
     rraPartition.put(jobKey, String.valueOf(jobId), 7200);
@@ -55,16 +55,34 @@ public with sharing class RRAClientAsync implements Queueable {
 
   public void execute(QueueableContext context) {
     try {
-      RRAClient.createRelationships(recordId, options);
+      RRAClient.createRelationships(recordId, optionsJson);
       System.debug('RRA async job completed for record: ' + recordId);
+
+      publishJobCompleteEvent(recordId, 'Success');
     } catch (Exception e) {
       System.debug('RRA async job failed for record: ' + recordId + ' - ' + e.getMessage());
+
+      publishJobCompleteEvent(recordId, 'Failed');
       throw e;
     } finally {
       // Clean up cache when job completes (success or failure)
       Cache.OrgPartition rraPartition = CacheProvider.getRRAPartition();
       if (rraPartition != null) {
         rraPartition.remove(getCacheKey(recordId));
+      }
+    }
+  }
+
+  private void publishJobCompleteEvent(String recordId, String status) {
+    RRA_Job_Complete__e event = new RRA_Job_Complete__e(RecordId__c = recordId, Status__c = status);
+
+    Database.SaveResult result = EventBus.publish(event);
+
+    if (result.isSuccess()) {
+      System.debug('Successfully published RRA job completion event for record: ' + recordId);
+    } else {
+      for (Database.Error error : result.getErrors()) {
+        System.debug('Error publishing event: ' + error.getMessage());
       }
     }
   }
