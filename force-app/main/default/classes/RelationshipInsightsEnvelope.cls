@@ -33,6 +33,8 @@ public with sharing class RelationshipInsightsEnvelope {
 
     r.uuid = String.valueOf(UUID.randomUUID());
     r.entityName = (String) m.get('entityName');
+    r.entityDescription = (String) m.get('entityDescription');
+    r.strengthSummary = (String) m.get('strengthSummary');
     r.canonicalName = (String) m.get('canonicalName');
     r.entityType = (String) m.get('entityType');
     r.predicate = (String) m.get('predicate');
@@ -168,6 +170,8 @@ public with sharing class RelationshipInsightsEnvelope {
   public class RelatedEntity {
     public String uuid;
     public String entityName;
+    public String entityDescription;
+    public String strengthSummary;
     public String canonicalName;
     public String entityType;
     public String predicate;
