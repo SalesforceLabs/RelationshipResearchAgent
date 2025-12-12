@@ -201,6 +201,11 @@ to work with custom text fields, not just default name fields.
 RRA will fail gracefully if DataCloud components are not available, e.g.
 will perform CRM matching instead.
 
+### Configure Logging and Telemetry
+
+Currently, logging and telemetry data are handled through `NebulaLogger`.
+[See Logging readme](./README_Logging.md)
+
 ## Development
 
 ### Running Tests
