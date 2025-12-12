@@ -164,13 +164,22 @@ public with sharing class CrmDatabaseSelectors {
   }
 
   public static RRARelationships__c getRraRecord(Id recordId, String recordType) {
-    List<RRARelationships__c> results = [
-      SELECT RelationshipJson__c, Diagnostics__c
-      FROM RRARelationships__c
-      WHERE RecordId__c = :recordId AND RecordType__c = :recordType
-      LIMIT 1
-    ];
-    return results.isEmpty() ? null : results[0];
+    Benchmarker bm = new Benchmarker('getRraRecord');
+    bm.startTelemetry('getRraRecord', recordType);
+    try {
+      List<RRARelationships__c> results = [
+        SELECT RelationshipJson__c, Diagnostics__c
+        FROM RRARelationships__c
+        WHERE RecordId__c = :recordId AND RecordType__c = :recordType
+        LIMIT 1
+      ];
+      return results.isEmpty() ? null : results[0];
+    } catch (Exception ex) {
+      bm.error(ex);
+      throw ex;
+    } finally {
+      bm.complete();
+    }
   }
 
   public static AsyncApexJob getActiveAsyncJob(String jobId) {

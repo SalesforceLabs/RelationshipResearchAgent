@@ -17,7 +17,26 @@ public with sharing class EinsteinPromptService {
       String templateApiName,
       ConnectApi.EinsteinPromptTemplateGenerationsInput cfg
     ) {
-      return ConnectApi.EinsteinLLM.generateMessagesForPromptTemplate(templateApiName, cfg);
+      Benchmarker bm = new Benchmarker('EinsteinPromptService.run-' + templateApiName);
+      ConnectApi.EinsteinPromptTemplateGenerationsRepresentation generationsOutput = null;
+      bm.start();
+      bm.startTelemetry('EinsteinPromptService', templateApiName);
+      try {
+        generationsOutput = ConnectApi.EinsteinLLM.generateMessagesForPromptTemplate(
+          templateApiName,
+          cfg
+        );
+      } catch (Exception ex) {
+        // stop benchmarker before logging telemetry
+        generationsOutput = null;
+        // record an error on telemetry
+        bm.error(ex);
+      } finally {
+        // Ensure we stop the benchmarker in all cases.
+        // record generation results in telemetry
+        bm.complete(generationsOutput?.generations, generationsOutput?.generationErrors);
+      }
+      return generationsOutput;
     }
   }
 

@@ -27,6 +27,10 @@ public class AppLogger {
     return error(JSON.serialize(extraContext));
   }
 
+  public AppLogger error(Exception ex) {
+    return error(ex.getMessage());
+  }
+
   public AppLogger error(String message) {
     logInternal('ERROR', message);
     return this;
