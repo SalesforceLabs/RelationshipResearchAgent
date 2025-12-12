@@ -184,6 +184,7 @@ RRA processes relationships asynchronously in the background. To monitor job pro
 **Custom Objects:**
 
 - `RRARelationships__c` - Stores relationship data as JSON
+- `RRALogs__c` - Stores critical log and telemetry data
 
 **GenAI Prompt Templates:**
 
@@ -200,6 +201,14 @@ to work with custom text fields, not just default name fields.
 
 RRA will fail gracefully if DataCloud components are not available, e.g.
 will perform CRM matching instead.
+
+### Configure Logging and Telemetry
+
+Currently, logging and telemetry data are handled through `NebulaLogger`.
+[See Logging readme](./README_Logging.md)
+RRA functionality does not require `NebulaLogger` and will continue working
+without it. Additionally, critical telemetry data is also collected in `RRALogs__c`
+custom table.
 
 ## Development
 
