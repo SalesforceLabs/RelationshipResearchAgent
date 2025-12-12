@@ -429,11 +429,20 @@ public with sharing class EntityMatcher {
   }
 
   public static MatchedEntity findMatchesSingle(String name, EntityMatcherMode entityMatcherMode) {
-    Processor p = new Processor();
-    p.settings = new EntityMatcherSettings(entityMatcherMode);
-    p.add(name);
-    List<MatchedEntity> l = p.match();
-    return (l == null || l.isEmpty()) ? null : l[0];
+    Benchmarker bm = new Benchmarker('findMatchesSingle');
+    bm.startTelemetry();
+    try {
+      Processor p = new Processor();
+      p.settings = new EntityMatcherSettings(entityMatcherMode);
+      p.add(name);
+      List<MatchedEntity> l = p.match();
+      return (l == null || l.isEmpty()) ? null : l[0];
+    } catch (Exception ex) {
+      bm.error(ex);
+      throw ex;
+    } finally {
+      bm.complete();
+    }
   }
 
   @InvocableMethod(label='Find matches in Salesforce')

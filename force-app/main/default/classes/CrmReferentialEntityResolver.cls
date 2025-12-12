@@ -19,6 +19,19 @@ public with sharing class CrmReferentialEntityResolver {
   }
 
   public static ICrmReferentialEntity resolveById(String recordId) {
+    Benchmarker bm = new Benchmarker('CrmReferentialEntityResolver.resolveById');
+    bm.startTelemetry('CrmReferentialEntityResolver.resolveById');
+    try {
+      return resolveByIdImpl(recordId);
+    } catch (Exception ex) {
+      bm.error(ex);
+      throw ex;
+    } finally {
+      bm.complete();
+    }
+  }
+
+  static ICrmReferentialEntity resolveByIdImpl(String recordId) {
     if (String.isBlank(recordId) || recordId.length() < 3) {
       throw new RecordNotFoundException('Invalid record ID: ' + recordId);
     }
