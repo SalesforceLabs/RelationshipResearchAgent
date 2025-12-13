@@ -3,6 +3,8 @@
  * relationship insights data.
  */
 public with sharing class RelationshipInsightsPersister {
+  private static final RRADiagnostics diag = RRADiagnostics.getInstance();
+
   /**
    * Validate payload & upsert.
    * Returns the JSON string of the persisted insights envelope.
@@ -39,7 +41,7 @@ public with sharing class RelationshipInsightsPersister {
     }
 
     rraRecord.RelationshipJson__c = upsertString;
-    rraRecord.Diagnostics__c = RRADiagnostics.getInstance().toJson();
+    rraRecord.Diagnostics__c = diag.toJson();
 
     try {
       update rraRecord;

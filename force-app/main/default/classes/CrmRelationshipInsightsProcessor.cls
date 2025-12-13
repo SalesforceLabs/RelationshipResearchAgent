@@ -1,4 +1,5 @@
 public with sharing class CrmRelationshipInsightsProcessor {
+  private static final RRADiagnostics diag = RRADiagnostics.getInstance();
   private static final Integer MAX_CHARS_PER_CHUNK = 80000; // ~20k tokens
 
   private ICrmReferentialEntity targetEntity;
@@ -66,8 +67,11 @@ public with sharing class CrmRelationshipInsightsProcessor {
       RRAPromptTemplates.ENTITIES_FROM_CRM,
       params
     );
+
+    List<Object> crmInsights = response.getJsonList();
+
     return RelationshipInsightsEnvelope.fromObjectList(
-      response.getJsonList(),
+      crmInsights,
       RelationshipInsightsEnvelope.SOURCE_CRM
     );
   }
@@ -88,8 +92,12 @@ public with sharing class CrmRelationshipInsightsProcessor {
       RRAPromptTemplates.CONSOLIDATE_INSIGHTS,
       params
     );
+
+    List<Object> crmInsights = response.getJsonList();
+    diag.get('CrmInsights').put('Consolidated', crmInsights);
+
     return RelationshipInsightsEnvelope.fromObjectList(
-      response.getJsonList(),
+      crmInsights,
       RelationshipInsightsEnvelope.SOURCE_CRM
     );
   }

@@ -1,5 +1,5 @@
 public class RRADiagnostics {
-  private static RRADiagnostics instance;
+  private static final RRADiagnostics instance = new RRADiagnostics();
   public Map<String, Object> data;
 
   private RRADiagnostics() {
@@ -7,9 +7,6 @@ public class RRADiagnostics {
   }
 
   public static RRADiagnostics getInstance() {
-    if (instance == null) {
-      instance = new RRADiagnostics();
-    }
     return instance;
   }
 
