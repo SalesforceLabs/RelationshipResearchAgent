@@ -5,6 +5,10 @@ public with sharing class RelationshipInsightsService {
   // We do not want to take answers with small confidence. 68% is 1 sigma.
   public static final Integer MIN_CRM_MATCH_CONFIDENCE = 68;
 
+  // total of 20 is allowed per txn, reserve 1 for target entity search
+  // breaching this limit will trigger non-catchable apex exception "FATAL_ERROR|System.LimitException: Too many SOSL queries: 21"
+  public static final Integer MAX_SOSL_WEB = 19;
+
   public static RelationshipInsightsEnvelope getInsights(
     ICrmReferentialEntity targetEntity,
     RRARelationships__c rraRecord,
@@ -134,7 +138,15 @@ public with sharing class RelationshipInsightsService {
     List<RelationshipInsightsEnvelope.RelatedEntity> rels,
     EntityMatcher.EntityMatcherMode entityMatcherMode
   ) {
+    Integer soslCount = 1;
     for (RelationshipInsightsEnvelope.RelatedEntity rel : rels) {
+      if (soslCount > MAX_SOSL_WEB) {
+        System.debug(LoggingLevel.WARN, 'Error: Max SOSL calls reached in matchAgainstCrmEntities');
+        return;
+      }
+
+      soslCount += 1;
+
       if (rel == null) {
         System.debug('Skipping null related entity');
         continue;

@@ -2,6 +2,13 @@ public with sharing class EntityMatcher {
   // Maximum number of matches to process in a single batch.
   public final static Integer MAX_MATCHES_BATCH = 500;
 
+  // TODO
+  // There is currently a limit of 20 SOSL queries per RRA job
+  // We can only reserve 1 SOSL query per entity when allowing for 20 entity searches
+  // SOSL failures are non-recoverable (ignored by try-catch) so we must stay within this limit
+  // This class must rewritten to support batch-mode in order to support "overflow" tokenization (>1 searches per entity)
+  public final static Integer MAX_SOSL_QUERIES = 1;
+
   public enum EntityMatcherMode {
     SOSL_ONLY, // SOSL search only
     DATACLOUD_ONLY, // Datacloud only, error in DC aborts the process
@@ -462,11 +469,18 @@ public with sharing class EntityMatcher {
 
     SchemaData schemaData = SchemaData.getCachedSchemaData();
 
-    for (;;) {
+    for (Integer soslIteration = 1;; soslIteration += 1) {
+      if (soslIteration > MAX_SOSL_QUERIES) {
+        System.debug(System.LoggingLevel.ERROR, 'Error: SOSL query limit exceeded');
+        break;
+      }
+
       String sosl = schemaData.buildFindSOSL(soslTextQuery);
       System.Debug(sosl);
+
       // Execute the SOSL query dynamically
       List<List<SObject>> queryResults = Search.query(sosl);
+
       System.Debug(queryResults);
 
       Integer idxData = 0;
