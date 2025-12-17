@@ -73,6 +73,9 @@ public with sharing class RRAClient {
       return '[]';
     }
 
+    // backfill diagnostics from file blob and send to client
+    record.Diagnostics__c = RRADiagnosticsPersister.getJson(record.Id);
+
     String result = JSON.serialize(record);
 
     return result;
