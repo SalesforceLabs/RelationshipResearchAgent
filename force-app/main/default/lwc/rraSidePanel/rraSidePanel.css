@@ -1,0 +1,128 @@
+.slds-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 40%;
+  z-index: 9000;
+  background: white;
+  box-shadow: 0 2px 3px 0 rgba(0, 0, 0, 0.16);
+  transform: translateX(100%);
+  transition: transform 0.3s ease-in-out;
+}
+
+.slds-panel.slds-is-open {
+  transform: translateX(0);
+}
+
+.slds-panel__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-top: 1px solid #dddbda;
+  border-bottom: 1px solid #dddbda;
+  background-color: white;
+}
+
+.slds-panel__header-title {
+  margin: 0;
+  font-weight: 400;
+}
+
+.slds-panel__close {
+  flex-shrink: 0;
+}
+
+.slds-panel__body {
+  padding: 1rem;
+  overflow-y: auto;
+  height: calc(100% - 120px);
+}
+
+.slds-panel__footer {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 1rem;
+  border-top: 1px solid #dddbda;
+  background-color: white;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+.slds-backdrop {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 8999;
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+.slds-backdrop.slds-backdrop_open {
+  display: block;
+}
+
+.star-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #ffb300;
+}
+
+.star-icon lightning-icon {
+  --slds-c-icon-color-foreground: #ffffff;
+  --slds-c-icon-color-foreground-default: #ffffff;
+  transform: scale(0.75);
+}
+
+.citation {
+  font-style: italic;
+}
+
+.section-heading {
+  display: block;
+}
+
+.entity-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  border: 2px solid #c9c9c9;
+  overflow: hidden;
+}
+
+.entity-avatar lightning-icon {
+  background-color: #5867e8;
+  border-radius: 50%;
+  padding: 8px;
+}
+
+.relationship-entities {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.relationship-arrow {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  line-height: 0.8;
+  margin-bottom: 12px;
+  color: #706e6b5c;
+  font-size: 24px;
+  letter-spacing: -0.3em;
+}

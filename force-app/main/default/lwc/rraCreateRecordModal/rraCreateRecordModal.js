@@ -1,4 +1,5 @@
 import { LightningElement, api, track } from "lwc";
+import * as Constants from "c/rraConstants";
 
 export default class RraCreateRecordModal extends LightningElement {
   @api isOpen = false;
@@ -7,25 +8,21 @@ export default class RraCreateRecordModal extends LightningElement {
   @track isCreating = false;
 
   get objectApiName() {
-    const entityType = this.nodeData?.entityType?.toLowerCase();
-
-    if (entityType === "person") {
-      return "Contact";
-    } else {
-      return "Account";
-    }
+    return this.nodeData.entityType === Constants.ENTITY_TYPES.PERSON
+      ? Constants.RECORD_TYPES.CONTACT
+      : Constants.RECORD_TYPES.ACCOUNT;
   }
 
   get recordTypeLabel() {
-    return this.objectApiName === "Contact" ? "Contact" : "Account";
+    return this.objectApiName;
   }
 
   get isContactForm() {
-    return this.objectApiName === "Contact";
+    return this.objectApiName === Constants.RECORD_TYPES.CONTACT;
   }
 
   get isAccountForm() {
-    return this.objectApiName === "Account";
+    return this.objectApiName === Constants.RECORD_TYPES.ACCOUNT;
   }
 
   get saveButtonLabel() {
@@ -35,7 +32,7 @@ export default class RraCreateRecordModal extends LightningElement {
   get defaultFieldValues() {
     const entityName = this.nodeData?.label || this.nodeData?.id || "";
 
-    if (this.objectApiName === "Contact") {
+    if (this.isContactForm) {
       const nameParts = entityName.trim().split(" ");
       const firstName = nameParts[0] || "";
       const lastName = nameParts.slice(1).join(" ") || entityName;
@@ -44,7 +41,7 @@ export default class RraCreateRecordModal extends LightningElement {
         FirstName: firstName,
         LastName: lastName
       };
-    } else if (this.objectApiName === "Account") {
+    } else if (this.isAccountForm) {
       return {
         Name: entityName
       };

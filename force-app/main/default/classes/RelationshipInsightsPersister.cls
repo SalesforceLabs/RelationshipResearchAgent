@@ -3,6 +3,8 @@
  * relationship insights data.
  */
 public with sharing class RelationshipInsightsPersister {
+  private static final RRADiagnostics diag = RRADiagnostics.getInstance();
+
   /**
    * Validate payload & upsert.
    * Returns the JSON string of the persisted insights envelope.
@@ -24,7 +26,6 @@ public with sharing class RelationshipInsightsPersister {
       newObj.RecordId__c = ae.recordId;
       newObj.RecordType__c = ae.recordType;
       newObj.RelationshipJson__c = upsertString;
-      newObj.Diagnostics__c = RRADiagnostics.getInstance().toJson();
 
       try {
         insert newObj;
@@ -35,24 +36,34 @@ public with sharing class RelationshipInsightsPersister {
         System.debug(e.getMessage());
       }
 
+      persistDiagnostics(newObj.Id);
+
       return upsertString;
     }
 
     rraRecord.RelationshipJson__c = upsertString;
-    rraRecord.Diagnostics__c = RRADiagnostics.getInstance().toJson();
 
     try {
       update rraRecord;
 
       System.debug('Updated existing RRA relationships object:');
       System.debug(rraRecord);
-
-      return upsertString;
     } catch (Exception e) {
       System.debug('Error updating RRA relationships object:');
       System.debug(e.getMessage());
+
+      return '';
     }
 
-    return '';
+    persistDiagnostics(rraRecord.Id);
+    return upsertString;
+  }
+
+  private static void persistDiagnostics(Id recordId) {
+    try {
+      rraDiagnosticsPersister.saveJSON(recordId, diag.toJson());
+    } catch (RRADiagnosticsPersister.StorageException e) {
+      System.debug(System.LoggingLevel.ERROR, 'Error: Persisting RRA diagnostics failed');
+    }
   }
 }

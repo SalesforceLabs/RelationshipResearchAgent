@@ -54,9 +54,15 @@
 
 /* Labels */
 .node-label {
-  fill: #2e2e2e; /* matches previous inline JS color */
+  fill: #2e2e2e;
   font-size: 13px;
   font-family: Calibri, Arial, sans-serif;
   text-anchor: middle;
   dominant-baseline: hanging;
+}
+
+.component-container {
+  position: relative;
+  overflow: hidden;
+  min-height: 500px;
 }

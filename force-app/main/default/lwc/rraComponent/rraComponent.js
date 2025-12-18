@@ -1,4 +1,4 @@
-import { track, LightningElement, api, wire } from "lwc";
+import { LightningElement, api, wire } from "lwc";
 import { ShowToastEvent } from "lightning/platformShowToastEvent";
 import { loadScript } from "lightning/platformResourceLoader";
 import { CurrentPageReference, NavigationMixin } from "lightning/navigation";
@@ -13,17 +13,10 @@ import ICONS_URL from "@salesforce/resourceUrl/symbols";
 import ICONS_UTIL_URL from "@salesforce/resourceUrl/symbolsutil";
 
 import { RraGraph, GraphDataBuilder } from "c/rraGraph";
+import * as Constants from "c/rraConstants";
 
 export default class RraComponent extends NavigationMixin(LightningElement) {
   static d3Loaded = false;
-
-  // TODO: Update the prompt to return titlecase record types instead of handling conversion here
-  static RECORD_TYPE_TITLECASE = {
-    lead: "Lead",
-    contact: "Contact",
-    account: "Account",
-    opportunity: "Opportunity"
-  };
 
   @api recordId;
   @api objectApiName;
@@ -59,10 +52,10 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
     { label: "Datacloud, Fallback on SOSL", value: "DATACLOUD_FALLBACK_SOSL" }
   ];
 
-  // modal form behavior
   showCreateRecordModal = false;
   showConfirmMatchModal = false;
   selectedNodeData = {};
+  showSidePanel = false;
 
   // Platform Event subscription
   subscription = {};
@@ -180,7 +173,8 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
         svg: this.template.querySelector("svg.d3"),
         iconsUrl: ICONS_URL,
         iconsUtilUrl: ICONS_UTIL_URL,
-        onNodeClick: this.handleNodeClick.bind(this)
+        onNodeClick: this.handleNodeClick.bind(this),
+        onEdgeClick: this.handleEdgeClick.bind(this)
       });
       graph.clear();
       graph.render(this.graphData);
@@ -445,31 +439,26 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
   // handlers
 
   async handleNodeClick(nodeData) {
-    if (nodeData.recordId) {
-      if (nodeData.source === "web" && !nodeData.isCrmConfirmed) {
-        this.selectedNodeData = {
-          ...nodeData,
-          titlecaseRecordType: RraComponent.RECORD_TYPE_TITLECASE[nodeData.recordType] || ""
-        };
-        this.showConfirmMatchModal = true;
-      } else {
-        const recordUrl = await this[NavigationMixin.GenerateUrl]({
-          type: "standard__recordPage",
-          attributes: {
-            recordId: nodeData.recordId,
-            objectApiName: nodeData.recordType,
-            actionName: "view"
-          }
-        });
-        window.open(recordUrl, "_blank");
-      }
-    } else {
-      this.selectedNodeData = {
-        ...nodeData,
-        titlecaseRecordType: RraComponent.RECORD_TYPE_TITLECASE[nodeData.recordType] || ""
-      };
-      this.showCreateRecordModal = true;
+    if (nodeData.isFocus) {
+      return;
     }
+
+    const anchorNode = this.graphData.nodes.find((n) => n.isFocus);
+    this.selectedNodeData = {
+      isEdge: false,
+      anchorNode,
+      targetNode: nodeData
+    };
+    this.showSidePanel = true;
+  }
+
+  handleEdgeClick(edgeData) {
+    this.selectedNodeData = {
+      isEdge: true,
+      anchorNode: edgeData.anchorNode,
+      targetNode: edgeData.targetNode
+    };
+    this.showSidePanel = true;
   }
 
   handleCloseCreateRecordModal() {
@@ -488,8 +477,39 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
     }
   }
 
+  handleCloseSidePanel() {
+    this.showSidePanel = false;
+  }
+
+  async handleSidePanelViewRecord(event) {
+    const { nodeData } = event.detail;
+    const recordUrl = await this[NavigationMixin.GenerateUrl]({
+      type: "standard__recordPage",
+      attributes: {
+        recordId: nodeData.recordId,
+        objectApiName: nodeData.recordType,
+        actionName: "view"
+      }
+    });
+    window.open(recordUrl, "_blank");
+  }
+
+  handleSidePanelConfirmMatch(event) {
+    const { nodeData } = event.detail;
+    this.showSidePanel = false;
+    this.selectedNodeData = nodeData;
+    this.showConfirmMatchModal = true;
+  }
+
+  handleSidePanelCreateRecord(event) {
+    const { nodeData } = event.detail;
+    this.showSidePanel = false;
+    this.selectedNodeData = nodeData;
+    this.showCreateRecordModal = true;
+  }
+
   async handleConfirmMatch(event) {
-    const { recordId, objectApiName, nodeId, nodeData } = event.detail;
+    const { nodeId, nodeData } = event.detail;
 
     try {
       await confirmCrmMatch({
@@ -542,7 +562,7 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
   }
 
   async handleCreateRecord(event) {
-    const { nodeId, objectType, formData, sourceData } = event.detail;
+    const { objectType } = event.detail;
     const recordType = objectType;
 
     try {

@@ -1,7 +1,13 @@
 public with sharing class RelationshipInsightsService {
+  private static final RRADiagnostics diag = RRADiagnostics.getInstance();
+
   // The confidence is returned by model and we might need to adjust.
   // We do not want to take answers with small confidence. 68% is 1 sigma.
   public static final Integer MIN_CRM_MATCH_CONFIDENCE = 68;
+
+  // total of 20 is allowed per txn, reserve 1 for target entity search
+  // breaching this limit will trigger non-catchable apex exception "FATAL_ERROR|System.LimitException: Too many SOSL queries: 21"
+  public static final Integer MAX_SOSL_WEB = 19;
 
   public static RelationshipInsightsEnvelope getInsights(
     ICrmReferentialEntity targetEntity,
@@ -132,7 +138,15 @@ public with sharing class RelationshipInsightsService {
     List<RelationshipInsightsEnvelope.RelatedEntity> rels,
     EntityMatcher.EntityMatcherMode entityMatcherMode
   ) {
+    Integer soslCount = 1;
     for (RelationshipInsightsEnvelope.RelatedEntity rel : rels) {
+      if (soslCount > MAX_SOSL_WEB) {
+        System.debug(LoggingLevel.WARN, 'Error: Max SOSL calls reached in matchAgainstCrmEntities');
+        return;
+      }
+
+      soslCount += 1;
+
       if (rel == null) {
         System.debug('Skipping null related entity');
         continue;
@@ -256,12 +270,11 @@ public with sharing class RelationshipInsightsService {
     String crmJson = JSON.serialize(crmInsights);
     String webJson = JSON.serialize(webInsights);
 
-    RRADiagnostics.DiagnosticEntry diag = RRADiagnostics.getInstance()
-      .get('CrossSourceConsolidation');
-    diag.put('crmInsightsCount', crmInsights.size());
-    diag.put('webInsightsCount', webInsights.size());
-    diag.put('crmInsights', JSON.deserializeUntyped(crmJson));
-    diag.put('webInsights', JSON.deserializeUntyped(webJson));
+    RRADiagnostics.DiagnosticEntry entry = diag.get('CrossSourceConsolidation');
+    entry.put('crmInsightsCount', crmInsights.size());
+    entry.put('webInsightsCount', webInsights.size());
+    entry.put('crmInsights', JSON.deserializeUntyped(crmJson));
+    entry.put('webInsights', JSON.deserializeUntyped(webJson));
 
     Map<String, Object> inputs = new Map<String, Object>();
     inputs.put('Input:CrmRelationships', crmJson);
