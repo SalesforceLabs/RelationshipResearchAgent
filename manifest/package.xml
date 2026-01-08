@@ -2,6 +2,7 @@
 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
     <!-- Apex Classes -->
     <types>
+        <members>AppLogger</members>
         <members>Benchmarker</members>
         <members>CacheProvider</members>
         <members>CrmDatabaseSelectors</members>
@@ -14,6 +15,7 @@
         <members>EinsteinPromptResponse</members>
         <members>EinsteinPromptService</members>
         <members>EntityMatcher</members>
+        <members>EntityMatcherDataCloud</members>
         <members>EntityMatcherTest</members>
         <members>ICrmReferentialEntity</members>
         <members>JsonChunker</members>
@@ -23,8 +25,12 @@
         <members>RelationshipInsightsService</members>
         <members>RRAClient</members>
         <members>RRAClientAsync</members>
+        <members>RRAClientOptions</members>
         <members>RRADiagnostics</members>
+        <members>RRADiagnosticsPersister</members>
+        <members>RRAPromptTemplates</members>
         <members>RRARelationship</members>
+        <members>RRATestFactory</members>
         <members>SchemaData</members>
         <members>SchemaDataTest</members>
         <members>SOSLTokenBuilder</members>
@@ -36,8 +42,10 @@
     <types>
         <members>rraComponent</members>
         <members>rraConfirmMatchModal</members>
+        <members>rraConstants</members>
         <members>rraCreateRecordModal</members>
         <members>rraGraph</members>
+        <members>rraSidePanel</members>
         <name>LightningComponentBundle</name>
     </types>
 
@@ -64,17 +72,24 @@
         <members>RRA_EntityMatcher</members>
         <members>RRA_EntitiesFromCRM</members>
         <members>RRA_ConsolidateInsights</members>
+        <members>RRA_ConsolidateCrossSourceInsights</members>
         <members>RRA_AppendRelationships</members>
         <members>RRA_DeepWebResearch_Discovery</members>
         <members>RRA_DeepWebResearch_Refinement</members>
         <name>GenAiPromptTemplate</name>
     </types>
-
+    <types>
+        <members>rraCache</members>
+        <name>PlatformCachePartition</name>
+    </types>
     <!-- Custom Object -->
     <types>
         <members>RRARelationships__c</members>
         <name>CustomObject</name>
     </types>
-
+    <types>
+        <members>RRA_Job_Complete__e</members>
+        <name>CustomObject</name>
+    </types>
     <version>62.0</version>
 </Package>
