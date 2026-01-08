@@ -79,6 +79,10 @@
         <name>GenAiPromptTemplate</name>
     </types>
     <types>
+        <members>RRALogEventPublish</members>
+        <name>ApexTrigger</name>
+    </types>
+    <types>
         <members>rraCache</members>
         <name>PlatformCachePartition</name>
     </types>
@@ -89,6 +93,14 @@
     </types>
     <types>
         <members>RRA_Job_Complete__e</members>
+        <name>CustomObject</name>
+    </types>
+    <types>
+        <members>RRALogs__c</members>
+        <name>CustomObject</name>
+    </types>
+    <types>
+        <members>RRALogEvent__e</members>
         <name>CustomObject</name>
     </types>
     <version>62.0</version>
