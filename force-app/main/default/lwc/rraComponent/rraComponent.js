@@ -430,6 +430,9 @@ export default class RraComponent extends NavigationMixin(LightningElement) {
   }
 
   get showDebug() {
+    if (window.location.hash.includes("rraDebug=1")) {
+      return true;
+    }
     if (this.currentPageReference && this.currentPageReference.state) {
       return this.currentPageReference.state.c__rraDebug === "1";
     }

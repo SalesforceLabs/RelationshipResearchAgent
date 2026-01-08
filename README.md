@@ -299,6 +299,12 @@ cp node_modules/@salesforce-ux/design-system/assets/icons/utility-sprite/svg/sym
 - Output mode may reset from JSON
 - **Workaround:** Manually activate templates and set output mode to JSON in Prompt Builder
 
+## Debugging
+
+### Show debug controls on webpage
+
+- Add `#rraDebug=1` to the url of the web page. Refresh the page.
+
 ## Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
