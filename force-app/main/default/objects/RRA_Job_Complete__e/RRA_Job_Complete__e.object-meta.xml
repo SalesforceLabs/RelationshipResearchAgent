@@ -4,5 +4,5 @@
     <eventType>HighVolume</eventType>
     <label>RRA Job Complete</label>
     <pluralLabel>RRA Job Completes</pluralLabel>
-    <publishBehavior>PublishAfterCommit</publishBehavior>
+    <publishBehavior>PublishImmediately</publishBehavior>
 </CustomObject>
