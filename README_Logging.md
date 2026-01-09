@@ -72,3 +72,12 @@ To receive data from that log table, create and configure a report.
 - Save the report as `RRA Native Telemetry` in your provate folder.
 - Click `Reports` in the top menu. Select the report and click an arrow on the right to expand the menu. Click `Subscribe`. Use Daily frequency, you can set time as `8:00 AM`.
 - You will be receiving emails with exported report.
+
+### RRA Log retention
+
+Logs records will be kept for 12 months.
+
+- To schedule automatic deletion, run this code in anonymous
+  Apex window:
+  `RRALogsCleanupJob.scheduleJobWeekly();`
+- To remove records older than 180 days manually, run this code in anonymous Apex window: `RRALogsCleanupJob.runCleanupNow(180);`. Change `180` parameter as necessary.
