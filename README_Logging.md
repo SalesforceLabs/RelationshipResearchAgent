@@ -49,6 +49,12 @@ You need to install NebulaLogger.
 - Once installed, use AppLauncher to launch Nebula Logger.
 - You open `Event Stream` page to monitor entries. For telemetry, look for entries like `"eventName":"RRAClientAsync.execute-Call","mode":"telemetry","durationMs":889,"count":1}`
 
+### Add permission to use Nebula to RRA users
+
+If using `RRAPermSetGroup`:
+
+- Add `LoggerEndUser` permission set to `RRAPermSetGroup` permission set group.
+
 ### Export telemetry data via report on Nebula log table
 
 - `App Launcher` -> `Reports` -> `New Report`

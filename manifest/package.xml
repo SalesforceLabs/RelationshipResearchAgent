@@ -37,7 +37,10 @@
         <members>SOSLTokenBuilderTest</members>
         <name>ApexClass</name>
     </types>
-
+    <types>
+        <members>RRAEndUser</members>
+        <name>PermissionSet</name>
+    </types>
     <!-- Lightning Web Components -->
     <types>
         <members>rraComponent</members>

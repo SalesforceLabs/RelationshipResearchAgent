@@ -298,12 +298,36 @@ cp node_modules/@salesforce-ux/design-system/assets/icons/utility-sprite/svg/sym
 - Templates may deploy as inactive even when exported as active
 - Output mode may reset from JSON
 - **Workaround:** Manually activate templates and set output mode to JSON in Prompt Builder
+  - Go to `Setup` -> `Prompt Builder`
+  - Activate all prompts whose names start with `RRA`
+  - Note that the versions of the prompts will not be `1`, this is normal. The template files may contain many previous versions. Salesforce will activate the latest one.
+
+### Advanced permissions required
+
+Currently, all users of RRA must have permissions to execute Prompt Templates,
+and are assumed to have the same, advanced level of permissions. Non-admin
+and non-privileged users will be supported in subsequent versions of RRA.
+
+For non-admin users:
+
+- Ensure that the users can execute prompts.
+- Create a permission set group `RRAPermSetGroup`, assign `RRAEndUser` permission set,
+  and assign the permission set group to non-admin users.
 
 ## Debugging
 
 ### Show debug controls on webpage
 
 - Add `#rraDebug=1` to the url of the web page. Refresh the page.
+
+### Investigate research failures
+
+If you click `Start Research` on UI component and get an error:
+
+- Go to `Setup` -> `Apex Jobs`; use timestamps to locate the job started by `RRAClientAsync`.
+- If status details read something like `No generations returned from the prompt template.`, this means a template has not been activated.
+- To investigate further, get Apex logs: `sf apex log get --number 1 | grep 'USER_DEBUG'`
+- With Nebula, you can also look for errors in Nebula logs.
 
 ## Contributing
 
