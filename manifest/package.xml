@@ -28,6 +28,7 @@
         <members>RRAClientOptions</members>
         <members>RRADiagnostics</members>
         <members>RRADiagnosticsPersister</members>
+        <members>RRALogsCleanupJob</members>
         <members>RRAPromptTemplates</members>
         <members>RRARelationship</members>
         <members>RRATestFactory</members>
