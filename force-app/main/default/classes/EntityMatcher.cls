@@ -429,8 +429,7 @@ public with sharing class EntityMatcher {
   }
 
   public static MatchedEntity findMatchesSingle(String name, EntityMatcherMode entityMatcherMode) {
-    Benchmarker bm = new Benchmarker('findMatchesSingle');
-    bm.startTelemetry();
+    RRATelemetryClient telemetryClient = RRATelemetryClient.startTelemetry('findMatchesSingle');
     try {
       Processor p = new Processor();
       p.settings = new EntityMatcherSettings(entityMatcherMode);
@@ -438,10 +437,10 @@ public with sharing class EntityMatcher {
       List<MatchedEntity> l = p.match();
       return (l == null || l.isEmpty()) ? null : l[0];
     } catch (Exception ex) {
-      bm.error(ex);
+      telemetryClient.error(ex);
       throw ex;
     } finally {
-      bm.complete();
+      telemetryClient.complete();
     }
   }
 

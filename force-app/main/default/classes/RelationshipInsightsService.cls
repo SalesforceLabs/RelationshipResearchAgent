@@ -14,8 +14,7 @@ public with sharing class RelationshipInsightsService {
     RRARelationships__c rraRecord,
     RRAClientOptions options
   ) {
-    Benchmarker bm = new Benchmarker('getWebInsights');
-    bm.startTelemetry();
+    RRATelemetryClient telemetryClient = RRATelemetryClient.startTelemetry('getWebInsights');
     List<RelationshipInsightsEnvelope.RelatedEntity> webInsights = null;
     try {
       webInsights = getWebInsights(
@@ -25,10 +24,10 @@ public with sharing class RelationshipInsightsService {
         options.parseEntityMatcherMode()
       );
     } catch (Exception ex) {
-      bm.error(ex);
+      telemetryClient.error(ex);
       throw ex;
     } finally {
-      bm.complete(webInsights);
+      telemetryClient.complete(webInsights);
     }
 
     if (options.appendToExistingResearch) {
@@ -139,16 +138,15 @@ public with sharing class RelationshipInsightsService {
     }
 
     CrmRelationshipInsightsProcessor proc = new CrmRelationshipInsightsProcessor(targetEntity);
-    Benchmarker bm = new Benchmarker('getCrmInsights');
-    bm.startTelemetry();
+    RRATelemetryClient telemetryClient = RRATelemetryClient.startTelemetry('getCrmInsights');
     List<RelationshipInsightsEnvelope.RelatedEntity> insights = null;
     try {
       insights = proc.generateInsights(asm.getPayload());
     } catch (Exception ex) {
-      bm.error(ex);
+      telemetryClient.error(ex);
       throw ex;
     } finally {
-      bm.complete(insights);
+      telemetryClient.complete(insights);
     }
     return insights;
   }

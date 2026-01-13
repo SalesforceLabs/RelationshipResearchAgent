@@ -2,7 +2,6 @@
 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
     <!-- Apex Classes -->
     <types>
-        <members>AppLogger</members>
         <members>Benchmarker</members>
         <members>CacheProvider</members>
         <members>CrmDatabaseSelectors</members>
@@ -28,9 +27,11 @@
         <members>RRAClientOptions</members>
         <members>RRADiagnostics</members>
         <members>RRADiagnosticsPersister</members>
+        <members>RRALoggerFacade</members>
         <members>RRALogsCleanupJob</members>
         <members>RRAPromptTemplates</members>
         <members>RRARelationship</members>
+        <members>RRATelemetryClient</members>
         <members>RRATestFactory</members>
         <members>SchemaData</members>
         <members>SchemaDataTest</members>

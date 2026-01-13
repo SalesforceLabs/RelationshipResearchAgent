@@ -41,8 +41,10 @@ public with sharing class DeepWebResearchEngine {
 
   public static String run(ICrmReferentialEntity targetEntity, String recordContextSearchTerms) {
     String entityName = targetEntity.getName();
-    Benchmarker benchmark = new Benchmarker('DeepWebResearch for ' + entityName);
-    benchmark.startTelemetry('DeepWebResearchEngine');
+    RRATelemetryClient telemetryClient = new RRATelemetryClient();
+    telemetryClient.start('DeepWebResearchEngine');
+    telemetryClient.getLogger().debug('DeepWebResearch for ' + entityName);
+
     ResearchStage synthesis = null;
     try {
       ResearchContext context = new ResearchContext(entityName, recordContextSearchTerms);
@@ -58,11 +60,10 @@ public with sharing class DeepWebResearchEngine {
       return synthesis.stageOutput;
     } catch (Exception ex) {
       // TODO: extract code of the error if HTTP, add telemetry per code.
-      benchmark.error(ex);
+      telemetryClient.error(ex);
       return '[]';
     } finally {
-      benchmark.complete(synthesis?.resultEntities);
-      benchmark.report();
+      telemetryClient.complete(synthesis?.resultEntities);
     }
   }
 

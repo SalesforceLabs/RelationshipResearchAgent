@@ -164,8 +164,8 @@ public with sharing class CrmDatabaseSelectors {
   }
 
   public static RRARelationships__c getRraRecord(Id recordId, String recordType) {
-    Benchmarker bm = new Benchmarker('getRraRecord');
-    bm.startTelemetry('getRraRecord', recordType);
+    RRATelemetryClient telemetryClient = new RRATelemetryClient();
+    telemetryClient.start('getRraRecord', recordType);
     try {
       List<RRARelationships__c> results = [
         SELECT RelationshipJson__c, Diagnostics__c
@@ -175,10 +175,10 @@ public with sharing class CrmDatabaseSelectors {
       ];
       return results.isEmpty() ? null : results[0];
     } catch (Exception ex) {
-      bm.error(ex);
+      telemetryClient.error(ex);
       throw ex;
     } finally {
-      bm.complete();
+      telemetryClient.complete();
     }
   }
 

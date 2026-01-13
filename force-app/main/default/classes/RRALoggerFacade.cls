@@ -1,4 +1,4 @@
-public class AppLoggerFacade {
+public class RRALoggerFacade {
   // Default scenarios
   private static String DEFAULT_LOG_SCENARIO = 'RRALogs';
   private static String DEFAULT_TELEMETRY_SCENARIO = 'RRATelemetry';
@@ -6,41 +6,28 @@ public class AppLoggerFacade {
   // ------------------------------
   // Logging methods
   // ------------------------------
-  public AppLoggerFacade info(Map<String, Object> extraContext) {
-    return info(JSON.serialize(extraContext));
-  }
 
-  public AppLoggerFacade info(String message) {
+  public RRALoggerFacade info(String message) {
     logInternal('INFO', message);
     return this;
   }
 
-  public AppLoggerFacade warn(Map<String, Object> extraContext) {
-    return info(JSON.serialize(extraContext));
-  }
-  public AppLoggerFacade warn(String message) {
+  public RRALoggerFacade warn(String message) {
     logInternal('WARN', message);
     return this;
   }
 
-  public AppLoggerFacade error(Map<String, Object> extraContext) {
-    return error(JSON.serialize(extraContext));
-  }
-
-  public AppLoggerFacade error(Exception ex) {
+  public RRALoggerFacade error(Exception ex) {
     return error(ex.getMessage());
   }
 
-  public AppLoggerFacade error(String message) {
+  public RRALoggerFacade error(String message) {
     logInternal('ERROR', message);
     return this;
   }
 
-  public AppLoggerFacade AppLoggerFacade(Map<String, Object> extraContext) {
-    return debug(JSON.serialize(extraContext));
-  }
-
-  public AppLoggerFacade debug(String message) {
+  // Currently used by Benchmarker
+  public RRALoggerFacade debug(String message) {
     logInternal('DEBUG', message);
     return this;
   }
@@ -67,7 +54,7 @@ public class AppLoggerFacade {
 
   private Integer scenarioSet = 0;
 
-  public AppLoggerFacade startScenario() {
+  public RRALoggerFacade startScenario() {
     if (nebulaLoggerInstance != null) {
       nebulaLoggerInstance.call('setScenario', new Map<String, Object>{ 'scenario' => scenario });
       this.scenarioSet++;
@@ -75,14 +62,14 @@ public class AppLoggerFacade {
     return this;
   }
 
-  public AppLoggerFacade endScenario() {
+  public RRALoggerFacade endScenario() {
     if (nebulaLoggerInstance != null) {
       nebulaLoggerInstance.call('endScenario', new Map<String, Object>{ 'scenario' => scenario });
     }
     return this;
   }
 
-  public AppLoggerFacade close() {
+  public RRALoggerFacade close() {
     while (this.scenarioSet > 0) {
       endScenario();
       scenarioSet--;
@@ -90,23 +77,23 @@ public class AppLoggerFacade {
     return this;
   }
 
-  public AppLoggerFacade() {
+  public RRALoggerFacade() {
     this.scenario = DEFAULT_LOG_SCENARIO;
   }
 
-  public AppLoggerFacade(string scenario) {
+  public RRALoggerFacade(String scenario) {
     this.scenario = scenario;
   }
 
-  public static AppLoggerFacade start() {
+  public static RRALoggerFacade start() {
     return start(DEFAULT_LOG_SCENARIO);
   }
 
-  public static AppLoggerFacade start(String scenario) {
-    return (new AppLoggerFacade(scenario)).startScenario();
+  public static RRALoggerFacade start(String scenario) {
+    return (new RRALoggerFacade(scenario)).startScenario();
   }
 
-  public static AppLoggerFacade startTelemetry() {
+  public static RRALoggerFacade startTelemetry() {
     return start(DEFAULT_TELEMETRY_SCENARIO);
   }
 
@@ -138,15 +125,39 @@ public class AppLoggerFacade {
   public class LogQueueable {
     private final List<LogDataToPublish> logs = new List<LogDataToPublish>();
 
-    public void Add(string category, string data) {
+    public void add(String category, String data) {
       logs.add(new LogDataToPublish(category, data));
     }
     // high-volume is 2000 events per call
     // but we also are limited per transaction
-    Integer batchSize = 1500;
+    final Integer callBatchSize = 1500;
+    // max per transaction is 10000 events, however we want to leave some room
+    // for other DML operations in the transaction, most importantly Nebula Logger calls.
+    Integer maxTransactionBatchSize = 4000;
+
     public void save() {
       if (logs.isEmpty()) {
         return; // nothing to do
+      }
+      Integer batchSize = Math.min(maxTransactionBatchSize, callBatchSize);
+      // we want to make sure that all telemetry events are preserved .
+      Integer countOfTelemetryLogs = 0;
+      for (Integer i = 0; i < logs.size(); i++) {
+        LogDataToPublish log = logs[i];
+        if (log.category.startsWith('RRATelemetry:')) {
+          // telemetry logs must always be preserved
+          countOfTelemetryLogs++;
+        }
+      }
+      // increase batch size to accommodate all telemetry logs.
+      if (countOfTelemetryLogs >= batchSize) {
+        batchSize = countOfTelemetryLogs;
+      }
+      if (batchSize <= 0) {
+        // not a fatal error: the batch size would have been extended to preserve
+        // telemetry logs already.
+        System.debug('RRALoggerFacade.LogQueueable: Zero available batch size');
+        return;
       }
       while (logs.size() > batchSize) {
         Integer maxPurgeOrder = -1;
@@ -195,27 +206,27 @@ public class AppLoggerFacade {
         }
       }
       System.debug('published ' + publishedCount.toString() + ' events through RRALogEvent__e');
-      batchSize -= logs.size();
+      this.maxTransactionBatchSize -= logs.size();
       logs.clear();
     }
   }
 
   static Integer suspendAutoSaveCounter = 0;
 
-  public static void SuspendAutoSave() {
+  public static void suspendAutoSave() {
     suspendAutoSaveCounter++;
   }
 
-  public static void ResumeAutoSave() {
+  public static void resumeAutoSave() {
     suspendAutoSaveCounter = Math.max(0, suspendAutoSaveCounter - 1);
     if (suspendAutoSaveCounter == 0) {
-      System.debug('Dispatching logs after ResumeAutoSave');
+      System.debug('Dispatching logs after resumeAutoSave');
       // this is presumably the end of the suspend, dispatch logs.
-      DispatchLogs();
+      dispatchLogs();
     }
   }
 
-  public static void DispatchLogs() {
+  public static void dispatchLogs() {
     if (suspendAutoSaveCounter > 0) {
       return;
     }
@@ -240,7 +251,7 @@ public class AppLoggerFacade {
     if (nebulaLoggerInstance == null) {
       // If it's null, then neither of Nebula Logger's packages is available in the org.
       // since we've already logged to System.debug, we just return.
-      DispatchLogs();
+      dispatchLogs();
       return;
     }
     Map<String, Object> newEntryInput = new Map<String, Object>{
@@ -255,7 +266,7 @@ public class AppLoggerFacade {
   }
 
   public void save() {
-    DispatchLogs();
+    dispatchLogs();
   }
 
   // ------------------------------
@@ -309,24 +320,14 @@ public class AppLoggerFacade {
     properties.put('mode', 'telemetry');
     properties.put('eventName', eventName);
     // Perform Nebula logging
-    AppLoggerFacade log = new AppLoggerFacade(scenario);
+    RRALoggerFacade log = new RRALoggerFacade(scenario);
     try {
       log.autoSave = true;
       log.startScenario();
       log.logInternal('INFO', JSON.serialize(properties));
     } finally {
-      // Ensure we close the scenario.
+      // Must always call close() after startScenario() to properly finalize and persist the scenario.
       log.close();
     }
-    // Example placeholder for stateless backend integration with InstrumentationService
-    // Uncomment and implement when InstrumentationOperation is available
-    /*
-        InstrumentationService service = new InstrumentationService(MetricServiceEnum.CRM, 'subservice', 'feature', 'subfeature');
-        InstrumentationOperation op = service.getInstrumentationOperation(eventName, null);
-        // Example: publish request count
-        op.publishIncrementalValue(MetricTypeEnum.REQUEST_COUNT, 1, 0);
-        // Example: publish duration
-        op.publishIncrementalValue(MetricTypeEnum.DURATION, durationMs, 0);
-        */
   }
 }

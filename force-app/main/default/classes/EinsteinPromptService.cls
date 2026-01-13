@@ -17,10 +17,10 @@ public with sharing class EinsteinPromptService {
       String templateApiName,
       ConnectApi.EinsteinPromptTemplateGenerationsInput cfg
     ) {
-      Benchmarker bm = new Benchmarker('EinsteinPromptService.run-' + templateApiName);
       ConnectApi.EinsteinPromptTemplateGenerationsRepresentation generationsOutput = null;
-      bm.start();
-      bm.startTelemetry('EinsteinPromptService', templateApiName);
+      RRATelemetryClient telemetryClient = new RRATelemetryClient();
+      telemetryClient.start('EinsteinPromptService', templateApiName);
+      telemetryClient.getLogger().debug('EinsteinPromptService: ' + templateApiName);
       try {
         generationsOutput = ConnectApi.EinsteinLLM.generateMessagesForPromptTemplate(
           templateApiName,
@@ -30,11 +30,14 @@ public with sharing class EinsteinPromptService {
         // stop benchmarker before logging telemetry
         generationsOutput = null;
         // record an error on telemetry
-        bm.error(ex);
+        telemetryClient.error(ex);
       } finally {
         // Ensure we stop the benchmarker in all cases.
         // record generation results in telemetry
-        bm.complete(generationsOutput?.generations, generationsOutput?.generationErrors);
+        telemetryClient.complete(
+          generationsOutput?.generations,
+          generationsOutput?.generationErrors
+        );
       }
       return generationsOutput;
     }

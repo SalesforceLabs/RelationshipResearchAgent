@@ -19,15 +19,16 @@ public with sharing class CrmReferentialEntityResolver {
   }
 
   public static ICrmReferentialEntity resolveById(String recordId) {
-    Benchmarker bm = new Benchmarker('CrmReferentialEntityResolver.resolveById');
-    bm.startTelemetry('CrmReferentialEntityResolver.resolveById');
+    RRATelemetryClient telemetryClient = RRATelemetryClient.startTelemetry(
+      'CrmReferentialEntityResolver.resolveById'
+    );
     try {
       return resolveByIdImpl(recordId);
     } catch (Exception ex) {
-      bm.error(ex);
+      telemetryClient.error(ex);
       throw ex;
     } finally {
-      bm.complete();
+      telemetryClient.complete();
     }
   }
 

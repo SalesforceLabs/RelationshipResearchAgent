@@ -14,10 +14,9 @@ public with sharing class CrmRelationshipInsightsPayloadAssembler implements Dat
 
   // Builds payload with most recently created records (eg fallback when not enough records found).
   public void buildWithNewestRecords() {
-    Benchmarker bm = new Benchmarker(
+    RRATelemetryClient telemetryClient = RRATelemetryClient.startTelemetry(
       'CrmRelationshipInsightsPayloadAssembler.buildWithNewestRecords'
     );
-    bm.startTelemetry();
 
     try {
       List<Account> accounts = CrmDatabaseSelectors.getNewestAccounts(ACCOUNT_LIMIT);
@@ -35,10 +34,10 @@ public with sharing class CrmRelationshipInsightsPayloadAssembler implements Dat
         }
       }
     } catch (Exception ex) {
-      bm.error(ex);
+      telemetryClient.error(ex);
       throw ex;
     } finally {
-      bm.complete(this.size());
+      telemetryClient.complete(this.size());
     }
   }
 
@@ -57,8 +56,9 @@ public with sharing class CrmRelationshipInsightsPayloadAssembler implements Dat
   }
 
   public void build() {
-    Benchmarker bm = new Benchmarker('CrmRelationshipInsightsPayloadAssembler.build');
-    bm.startTelemetry();
+    RRATelemetryClient telemetryClient = RRATelemetryClient.startTelemetry(
+      'CrmRelationshipInsightsPayloadAssembler.build'
+    );
     try {
       if (queryAccounts.size() > 0) {
         List<Account> dbAccounts = CrmDatabaseSelectors.getAccountsByIds(queryAccounts);
@@ -80,10 +80,10 @@ public with sharing class CrmRelationshipInsightsPayloadAssembler implements Dat
         }
       }
     } catch (Exception ex) {
-      bm.error(ex);
+      telemetryClient.error(ex);
       throw ex;
     } finally {
-      bm.complete(this.size());
+      telemetryClient.complete(this.size());
     }
   }
 }
