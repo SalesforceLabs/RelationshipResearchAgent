@@ -87,9 +87,9 @@ public with sharing class EntityMatcher {
     @InvocableVariable
     public String note; // matching notes, if any
     @InvocableVariable
-    public string description; // not necessarily matching, can contain additional data. from SSOT
+    public String description; // not necessarily matching, can contain additional data. from SSOT
     @InvocableVariable
-    public string title;
+    public String title;
 
     // We have seen that DataCloud can return scores beyond 1.0, so we keep them as Double.
     // I have not been able to locate documentation on score ranges.
@@ -115,10 +115,10 @@ public with sharing class EntityMatcher {
     public String serialize() {
       return JSON.serialize(this);
     }
-    public string getAccountId() {
+    public String getAccountId() {
       return accountId;
     }
-    public string getContactId() {
+    public String getContactId() {
       return contactId;
     }
   }
@@ -132,7 +132,7 @@ public with sharing class EntityMatcher {
 
   public class MatchedEntity {
     @InvocableVariable
-    public string term;
+    public String term;
     @InvocableVariable
     public EntityInfoMatch[] matches;
   }
@@ -146,7 +146,7 @@ public with sharing class EntityMatcher {
     public String phone;
     public String email;
     public Double confidenceScore;
-    public string inputName;
+    public String inputName;
   }
 
   class DataCloudEntityJSON {
@@ -181,7 +181,7 @@ public with sharing class EntityMatcher {
       return String.isBlank(name) ? null : name.trim().toLowerCase();
     }
 
-    public void add(string name) {
+    public void add(String name) {
       name = normalizeName(name);
       if (String.isBlank(name)) {
         System.debug('Skipping blank/empty name');
