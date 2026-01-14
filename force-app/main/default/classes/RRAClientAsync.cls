@@ -53,18 +53,36 @@ public with sharing class RRAClientAsync implements Queueable {
     return JSON.serialize(new JobResponse(String.valueOf(jobId), 'QUEUED'));
   }
 
+  String getDebugErrorInfo(Exception e) {
+    return 'RRA async job failed for record: ' +
+      recordId +
+      ' - ' +
+      e.getMessage() +
+      ' | line=' +
+      e.getLineNumber() +
+      ' | stack=' +
+      e.getStackTraceString();
+  }
+
   public void execute(QueueableContext context) {
+    RRATelemetryClient telemetryClient = RRATelemetryClient.startTelemetry(
+      'RRAClientAsync.execute'
+    );
+    String jobCompleteEventStatus = 'Failed';
     try {
+      RRALoggerFacade.suspendAutoSave();
       RRAClient.createRelationships(recordId, optionsJson);
       System.debug('RRA async job completed for record: ' + recordId);
-
-      publishJobCompleteEvent(recordId, 'Success');
+      jobCompleteEventStatus = 'Success';
     } catch (Exception e) {
-      System.debug('RRA async job failed for record: ' + recordId + ' - ' + e.getMessage());
-
-      publishJobCompleteEvent(recordId, 'Failed');
+      telemetryClient.error(e);
+      System.debug(getDebugErrorInfo(e));
       throw e;
     } finally {
+      publishJobCompleteEvent(recordId, jobCompleteEventStatus);
+      telemetryClient.complete();
+      // make sure logs get written
+      RRALoggerFacade.resumeAutoSave();
       // Clean up cache when job completes (success or failure)
       Cache.OrgPartition rraPartition = CacheProvider.getRRAPartition();
       if (rraPartition != null) {

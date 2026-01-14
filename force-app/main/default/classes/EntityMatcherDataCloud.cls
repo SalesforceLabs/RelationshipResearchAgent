@@ -39,7 +39,7 @@ public with sharing class EntityMatcherDataCloud {
     }
   }
 
-  public static List<string> getDataCloudSearchText(
+  public static List<String> getDataCloudSearchText(
     SOSLTokenBuilder collectSosl,
     ICrmReferentialEntity crmContext
   ) {
@@ -49,7 +49,7 @@ public with sharing class EntityMatcherDataCloud {
     return new List<String>(collectSosl.getAllOriginalTokens());
   }
 
-  static string GetDataCloudFullSearchTerm(List<string> searchTexts, Boolean firstOnly) {
+  static String GetDataCloudFullSearchTerm(List<String> searchTexts, Boolean firstOnly) {
     if (searchTexts == null || searchTexts.isEmpty()) {
       return null;
     }

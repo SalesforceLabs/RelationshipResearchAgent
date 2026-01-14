@@ -184,6 +184,7 @@ RRA processes relationships asynchronously in the background. To monitor job pro
 **Custom Objects:**
 
 - `RRARelationships__c` - Stores relationship data as JSON
+- `RRALogs__c` - Stores critical log and telemetry data
 
 **GenAI Prompt Templates:**
 
@@ -200,6 +201,14 @@ to work with custom text fields, not just default name fields.
 
 RRA will fail gracefully if DataCloud components are not available, e.g.
 will perform CRM matching instead.
+
+### Configure Logging and Telemetry
+
+Currently, logging and telemetry data are handled through `NebulaLogger`.
+[See Logging readme](./README_Logging.md)
+RRA functionality does not require `NebulaLogger` and will continue working
+without it. Additionally, critical telemetry data is also collected in `RRALogs__c`
+custom table.
 
 ## Development
 
@@ -293,6 +302,33 @@ cp node_modules/@salesforce-ux/design-system/assets/icons/utility-sprite/svg/sym
 - Templates may deploy as inactive even when exported as active
 - Output mode may reset from JSON
 - **Workaround:** Manually activate templates and set output mode to JSON in Prompt Builder
+  - Go to `Setup` -> `Prompt Builder`
+  - For every template whose name starts with `RRA`:
+    - Open the template
+    - In Template Settings, Response set `Format` selector to `JSON`.
+    - Save and activate.
+  - Note that the versions of the prompts will not be `1`, this is normal. The template files may contain many previous versions. Salesforce will activate the latest one.
+
+### Advanced permissions required
+
+Currently, all users of RRA must have permissions to execute Prompt Templates,
+and are assumed to have the same, advanced level of permissions. Non-admin
+and non-privileged users will be supported in subsequent versions of RRA.
+
+## Debugging
+
+### Show debug controls on webpage
+
+- Add `?c__rraDebug=1` to the url of the web page. Refresh the page if necessary.
+
+### Investigate research failures
+
+If you click `Start Research` on UI component and get an error:
+
+- Go to `Setup` -> `Apex Jobs`; use timestamps to locate the job started by `RRAClientAsync`.
+- If status details read something like `No generations returned from the prompt template.`, this means a template has not been activated.
+- To investigate further, get Apex logs: `sf apex log get --number 1 | grep 'USER_DEBUG'`
+- With Nebula, you can also look for errors in Nebula logs.
 
 ## Contributing
 

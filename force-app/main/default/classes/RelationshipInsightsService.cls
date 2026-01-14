@@ -14,12 +14,21 @@ public with sharing class RelationshipInsightsService {
     RRARelationships__c rraRecord,
     RRAClientOptions options
   ) {
-    List<RelationshipInsightsEnvelope.RelatedEntity> webInsights = getWebInsights(
-      targetEntity,
-      options.useDeepWebSearch,
-      options.useRecordContext,
-      options.parseEntityMatcherMode()
-    );
+    RRATelemetryClient telemetryClient = RRATelemetryClient.startTelemetry('getWebInsights');
+    List<RelationshipInsightsEnvelope.RelatedEntity> webInsights = null;
+    try {
+      webInsights = getWebInsights(
+        targetEntity,
+        options.useDeepWebSearch,
+        options.useRecordContext,
+        options.parseEntityMatcherMode()
+      );
+    } catch (Exception ex) {
+      telemetryClient.error(ex);
+      throw ex;
+    } finally {
+      telemetryClient.complete(webInsights);
+    }
 
     if (options.appendToExistingResearch) {
       webInsights = appendWebInsights(targetEntity, webInsights, rraRecord);
@@ -49,12 +58,10 @@ public with sharing class RelationshipInsightsService {
     EntityMatcher.EntityMatcherMode entityMatcherMode
   ) {
     List<RelationshipInsightsEnvelope.RelatedEntity> rels;
-
     // Extract custom keywords from record to enhance search relevance
     String recordContextSearchTerms = useRecordContext
       ? RecordWebSearchContext.extractKeywords(targetEntity)
       : '';
-
     if (useDeepWebSearch) {
       System.debug('Using Deep Web Research Engine for entity: ' + targetEntity.getName());
       String deepWebResults = DeepWebResearchEngine.run(targetEntity, recordContextSearchTerms);
@@ -131,7 +138,17 @@ public with sharing class RelationshipInsightsService {
     }
 
     CrmRelationshipInsightsProcessor proc = new CrmRelationshipInsightsProcessor(targetEntity);
-    return proc.generateInsights(asm.getPayload());
+    RRATelemetryClient telemetryClient = RRATelemetryClient.startTelemetry('getCrmInsights');
+    List<RelationshipInsightsEnvelope.RelatedEntity> insights = null;
+    try {
+      insights = proc.generateInsights(asm.getPayload());
+    } catch (Exception ex) {
+      telemetryClient.error(ex);
+      throw ex;
+    } finally {
+      telemetryClient.complete(insights);
+    }
+    return insights;
   }
 
   private static void matchAgainstCrmEntities(

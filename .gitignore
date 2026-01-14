@@ -44,3 +44,7 @@ $RECYCLE.BIN/
 **/.venv/
 **/venv/
 eval/data
+
+#nebula
+force-app/nebula-logger-core/
+nebula-logger/

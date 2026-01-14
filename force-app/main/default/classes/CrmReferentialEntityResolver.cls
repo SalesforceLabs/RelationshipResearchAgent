@@ -19,6 +19,20 @@ public with sharing class CrmReferentialEntityResolver {
   }
 
   public static ICrmReferentialEntity resolveById(String recordId) {
+    RRATelemetryClient telemetryClient = RRATelemetryClient.startTelemetry(
+      'CrmReferentialEntityResolver.resolveById'
+    );
+    try {
+      return resolveByIdImpl(recordId);
+    } catch (Exception ex) {
+      telemetryClient.error(ex);
+      throw ex;
+    } finally {
+      telemetryClient.complete();
+    }
+  }
+
+  static ICrmReferentialEntity resolveByIdImpl(String recordId) {
     if (String.isBlank(recordId) || recordId.length() < 3) {
       throw new RecordNotFoundException('Invalid record ID: ' + recordId);
     }

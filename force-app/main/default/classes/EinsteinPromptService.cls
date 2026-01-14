@@ -17,7 +17,29 @@ public with sharing class EinsteinPromptService {
       String templateApiName,
       ConnectApi.EinsteinPromptTemplateGenerationsInput cfg
     ) {
-      return ConnectApi.EinsteinLLM.generateMessagesForPromptTemplate(templateApiName, cfg);
+      ConnectApi.EinsteinPromptTemplateGenerationsRepresentation generationsOutput = null;
+      RRATelemetryClient telemetryClient = new RRATelemetryClient();
+      telemetryClient.start('EinsteinPromptService', templateApiName);
+      telemetryClient.getLogger().debug('EinsteinPromptService: ' + templateApiName);
+      try {
+        generationsOutput = ConnectApi.EinsteinLLM.generateMessagesForPromptTemplate(
+          templateApiName,
+          cfg
+        );
+      } catch (Exception ex) {
+        // stop benchmarker before logging telemetry
+        generationsOutput = null;
+        // record an error on telemetry
+        telemetryClient.error(ex);
+      } finally {
+        // Ensure we stop the benchmarker in all cases.
+        // record generation results in telemetry
+        telemetryClient.complete(
+          generationsOutput?.generations,
+          generationsOutput?.generationErrors
+        );
+      }
+      return generationsOutput;
     }
   }
 

@@ -14,19 +14,30 @@ public with sharing class CrmRelationshipInsightsPayloadAssembler implements Dat
 
   // Builds payload with most recently created records (eg fallback when not enough records found).
   public void buildWithNewestRecords() {
-    List<Account> accounts = CrmDatabaseSelectors.getNewestAccounts(ACCOUNT_LIMIT);
+    RRATelemetryClient telemetryClient = RRATelemetryClient.startTelemetry(
+      'CrmRelationshipInsightsPayloadAssembler.buildWithNewestRecords'
+    );
 
-    for (Account acc : accounts) {
-      if (addedIds.add(acc.Id)) {
-        payload.accounts.add(new CrmDataDtos.CompactAccount(acc));
-      }
-    }
+    try {
+      List<Account> accounts = CrmDatabaseSelectors.getNewestAccounts(ACCOUNT_LIMIT);
 
-    List<Contact> contacts = CrmDatabaseSelectors.getNewestContactsWithEmail(CONTACT_LIMIT);
-    for (Contact con : contacts) {
-      if (addedIds.add(con.Id)) {
-        payload.contacts.add(new CrmDataDtos.CompactContact(con));
+      for (Account acc : accounts) {
+        if (addedIds.add(acc.Id)) {
+          payload.accounts.add(new CrmDataDtos.CompactAccount(acc));
+        }
       }
+
+      List<Contact> contacts = CrmDatabaseSelectors.getNewestContactsWithEmail(CONTACT_LIMIT);
+      for (Contact con : contacts) {
+        if (addedIds.add(con.Id)) {
+          payload.contacts.add(new CrmDataDtos.CompactContact(con));
+        }
+      }
+    } catch (Exception ex) {
+      telemetryClient.error(ex);
+      throw ex;
+    } finally {
+      telemetryClient.complete(this.size());
     }
   }
 
@@ -45,24 +56,34 @@ public with sharing class CrmRelationshipInsightsPayloadAssembler implements Dat
   }
 
   public void build() {
-    if (queryAccounts.size() > 0) {
-      List<Account> dbAccounts = CrmDatabaseSelectors.getAccountsByIds(queryAccounts);
-      for (Account a : dbAccounts) {
-        if (addedIds.add(a.Id)) {
-          payload.accounts.add(new CrmDataDtos.CompactAccount(a));
+    RRATelemetryClient telemetryClient = RRATelemetryClient.startTelemetry(
+      'CrmRelationshipInsightsPayloadAssembler.build'
+    );
+    try {
+      if (queryAccounts.size() > 0) {
+        List<Account> dbAccounts = CrmDatabaseSelectors.getAccountsByIds(queryAccounts);
+        for (Account a : dbAccounts) {
+          if (addedIds.add(a.Id)) {
+            payload.accounts.add(new CrmDataDtos.CompactAccount(a));
+          }
         }
       }
-    }
-    if (queryAccounts.size() > 0 || queryContacts.size() > 0) {
-      List<Contact> dbContacts = CrmDatabaseSelectors.getContactsByIds(
-        queryContacts,
-        queryAccounts
-      );
-      for (Contact c : dbContacts) {
-        if (addedIds.add(c.Id)) {
-          payload.contacts.add(new CrmDataDtos.CompactContact(c));
+      if (queryAccounts.size() > 0 || queryContacts.size() > 0) {
+        List<Contact> dbContacts = CrmDatabaseSelectors.getContactsByIds(
+          queryContacts,
+          queryAccounts
+        );
+        for (Contact c : dbContacts) {
+          if (addedIds.add(c.Id)) {
+            payload.contacts.add(new CrmDataDtos.CompactContact(c));
+          }
         }
       }
+    } catch (Exception ex) {
+      telemetryClient.error(ex);
+      throw ex;
+    } finally {
+      telemetryClient.complete(this.size());
     }
   }
 }

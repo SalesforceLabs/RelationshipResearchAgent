@@ -41,8 +41,11 @@ public with sharing class DeepWebResearchEngine {
 
   public static String run(ICrmReferentialEntity targetEntity, String recordContextSearchTerms) {
     String entityName = targetEntity.getName();
-    Benchmarker benchmark = new Benchmarker('DeepWebResearch for ' + entityName);
-    benchmark.start();
+    RRATelemetryClient telemetryClient = new RRATelemetryClient();
+    telemetryClient.start('DeepWebResearchEngine');
+    telemetryClient.getLogger().debug('DeepWebResearch for ' + entityName);
+
+    ResearchStage synthesis = null;
     try {
       ResearchContext context = new ResearchContext(entityName, recordContextSearchTerms);
 
@@ -52,17 +55,15 @@ public with sharing class DeepWebResearchEngine {
       ResearchStage relationships = executeDeepRelationshipStage(context);
       context.addStageResult(relationships);
 
-      ResearchStage synthesis = executeValidationSynthesisStage(context);
+      synthesis = executeValidationSynthesisStage(context);
       context.addStageResult(synthesis);
-
-      benchmark.stop();
-      benchmark.report();
       return synthesis.stageOutput;
-    } catch (Exception e) {
-      benchmark.stop();
-      benchmark.report();
-      System.debug(LoggingLevel.ERROR, 'Deep research failed: ' + e.getMessage());
+    } catch (Exception ex) {
+      // TODO: extract code of the error if HTTP, add telemetry per code.
+      telemetryClient.error(ex);
       return '[]';
+    } finally {
+      telemetryClient.complete(synthesis?.resultEntities);
     }
   }
 

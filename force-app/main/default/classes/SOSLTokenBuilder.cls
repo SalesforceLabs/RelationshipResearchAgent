@@ -34,7 +34,7 @@ public class SOSLTokenBuilder {
   // call a LLM to get the same variation results for us.
   public class FindNameVariantsCache implements CacheProvider.ValueProvider {
     public List<String> computedVariants { get; set; }
-    public string name { get; set; }
+    public String name { get; set; }
 
     private Boolean hasData() {
       return computedVariants != null && !computedVariants.isEmpty();
@@ -65,7 +65,7 @@ public class SOSLTokenBuilder {
   final Set<String> allTokens = new Set<String>();
 
   final Set<String> allOriginalTokens = new Set<String>();
-  public List<string> getAllOriginalTokens() {
+  public List<String> getAllOriginalTokens() {
     return new List<String>(allOriginalTokens);
   }
   // SOSL statement to execute, in form of AAA OR BBB OR CCC
@@ -133,7 +133,7 @@ public class SOSLTokenBuilder {
 
   public Boolean add(String token) {
     String sanitizedToken = escapeAndSanitizeForSosl(token);
-    if (string.isBlank(sanitizedToken) || !allTokens.add(sanitizedToken.toUpperCase())) {
+    if (String.isBlank(sanitizedToken) || !allTokens.add(sanitizedToken.toUpperCase())) {
       return false;
     }
     // for datacloud search, collect all original tokens.
@@ -143,7 +143,7 @@ public class SOSLTokenBuilder {
       collectedTokens.length() + sanitizedToken.length() + SOSL_JOIN.length() >=
       SOSL_MAX_QUERY_LENGTH
     ) {
-      if (string.isBlank(collectedTokens)) {
+      if (String.isBlank(collectedTokens)) {
         // we should not be here, unless the token is too large
         System.debug('Discarding search token: ' + sanitizedToken);
         return false;
@@ -153,7 +153,7 @@ public class SOSLTokenBuilder {
       resetCollectedTokens();
     }
 
-    if (!string.isBlank(collectedTokens)) {
+    if (!String.isBlank(collectedTokens)) {
       collectedTokens += SOSL_JOIN + sanitizedToken;
     } else {
       collectedTokens = sanitizedToken;

@@ -164,13 +164,22 @@ public with sharing class CrmDatabaseSelectors {
   }
 
   public static RRARelationships__c getRraRecord(Id recordId, String recordType) {
-    List<RRARelationships__c> results = [
-      SELECT RelationshipJson__c, Diagnostics__c
-      FROM RRARelationships__c
-      WHERE RecordId__c = :recordId AND RecordType__c = :recordType
-      LIMIT 1
-    ];
-    return results.isEmpty() ? null : results[0];
+    RRATelemetryClient telemetryClient = new RRATelemetryClient();
+    telemetryClient.start('getRraRecord', recordType);
+    try {
+      List<RRARelationships__c> results = [
+        SELECT RelationshipJson__c, Diagnostics__c
+        FROM RRARelationships__c
+        WHERE RecordId__c = :recordId AND RecordType__c = :recordType
+        LIMIT 1
+      ];
+      return results.isEmpty() ? null : results[0];
+    } catch (Exception ex) {
+      telemetryClient.error(ex);
+      throw ex;
+    } finally {
+      telemetryClient.complete();
+    }
   }
 
   public static AsyncApexJob getActiveAsyncJob(String jobId) {

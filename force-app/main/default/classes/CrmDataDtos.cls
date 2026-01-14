@@ -63,11 +63,11 @@ public with sharing class CrmDataDtos {
       return JSON.serialize(this);
     }
 
-    public string getAccountId() {
+    public String getAccountId() {
       return id;
     }
 
-    public string getContactId() {
+    public String getContactId() {
       return '';
     }
   }
@@ -137,11 +137,11 @@ public with sharing class CrmDataDtos {
       return JSON.serialize(this);
     }
 
-    public string getAccountId() {
+    public String getAccountId() {
       return accountId;
     }
 
-    public string getContactId() {
+    public String getContactId() {
       return id;
     }
   }
@@ -189,11 +189,11 @@ public with sharing class CrmDataDtos {
       return JSON.serialize(this);
     }
 
-    public string getAccountId() {
+    public String getAccountId() {
       return accountId;
     }
 
-    public string getContactId() {
+    public String getContactId() {
       return contactId;
     }
   }
@@ -265,10 +265,10 @@ public with sharing class CrmDataDtos {
       return JSON.serialize(this);
     }
 
-    public string getAccountId() {
+    public String getAccountId() {
       return '';
     }
-    public string getContactId() {
+    public String getContactId() {
       return '';
     }
   }
