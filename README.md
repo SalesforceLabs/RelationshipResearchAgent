@@ -210,6 +210,14 @@ RRA functionality does not require `NebulaLogger` and will continue working
 without it. Additionally, critical telemetry data is also collected in `RRALogs__c`
 custom table.
 
+### Customizing Research
+
+RRA uses AI prompt templates to extract and prioritize business relationships. You can customize which relationship types are prioritized based on your use case (sales, investment research, partnerships, academic research, etc.).
+
+For example, a sales team might prioritize employment relationships over board positions, while investment researchers might prioritize ownership and funding relationships.
+
+[See Prompt Customization Guide](./README_PromptGuide.md) for detailed instructions on modifying relationship priorities directly in Salesforce PromptBuilder.
+
 ## Development
 
 ### Running Tests
