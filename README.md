@@ -102,10 +102,10 @@ Before installing RRA, ensure your Salesforce org has:
 1. **Activate Custom Record Pages**
    - Navigate to **Setup > Lightning App Builder**
    - Open each custom record page:
-     - `Account_Record_Page`
-     - `Contact_Record_Page`
-     - `Lead_Record_Page1`
-     - `Opportunity_Record_Page`
+     - `RRA_Account_Record_Page`
+     - `RRA_Contact_Record_Page`
+     - `RRA_Lead_Record_Page`
+     - `RRA_Opportunity_Record_Page`
    - Click **Activation**
    - Set as org default or assign to specific apps/profiles
    - Save
